@@ -12,14 +12,15 @@ import DATN.repository.dtorepository.dto_custom;
 
 import org.springframework.http.*;
 import java.util.Map;
+import java.util.Random;
 
 @Service 
 public class dto_service {
     @Autowired
     private dto_custom dto_custom;
 
-    public void DATN_CRE_SP_DB00001_0(DTO_CREATE dto) {
-        dto_custom.DATN_CRE_SP_DB00001_0(dto);
+    public void WBH_AD_CRT_THEMSP(DTO_CREATE dto) {
+        dto_custom.WBH_AD_CRT_THEMSP(dto);
     }
 
     public List<DTO_DETAILS> DATN_SEL_SP_DB00001_1(int id_sp) {
@@ -44,14 +45,16 @@ public class dto_service {
 
     private final String url = "http://localhost:8080/api/san-pham/tao";
     private final RestTemplate restTemplate = new RestTemplate();
+    Random rand = new Random();
 
     public void generateProducts() {
-        for (int i = 1; i <= 100; i++) {
+        for (int i = 1; i <= 10; i++) {
             Map<String, Object> payload = new HashMap<>();
             payload.put("tensanpham", "iPhone 14 Pro " + i);
             payload.put("dongia", 25990000 + i * 100);
-            payload.put("loai", 1);
-            payload.put("thuonghieu", 1);
+            // payload.put("loai", rand.nextInt(15) + 1);
+            payload.put("loai",10);
+            payload.put("thuonghieu", rand.nextInt(20) + 1);
             payload.put("anhgoc", "default.png");
 
             payload.put("cpuBrand", "Apple");
@@ -68,12 +71,14 @@ public class dto_service {
             payload.put("gpuMemory", "6GB");
             payload.put("ram", "6GB");
             payload.put("rom", "128GB");
-            payload.put("screen", "6.1\"");
+            payload.put("screen", "6.1");
             payload.put("mausac", "Tím");
             payload.put("soluong", 10);
             
             payload.put("diachianh", "https://res.cloudinary.com/dkztehmmk/image/upload/v1751717436/iphone-15-pro-max-blue-1-2-650x650_lywrtu.png");
             
+            payload.put("loaigiam", rand.nextInt(15) + 1);
+            payload.put("hangiamgia", "2025-09-30");
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);

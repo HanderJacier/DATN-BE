@@ -25,9 +25,9 @@ public class dto_controller {
 
     // Tạo sản phẩm mới
     @PostMapping("/tao")
-    public ResponseEntity<String> DATN_CRE_SP_DB00001_0(@RequestBody DTO_CREATE dto) {
+    public ResponseEntity<String> WBH_AD_CRT_THEMSP(@RequestBody DTO_CREATE dto) {
         try {
-            dto_service.DATN_CRE_SP_DB00001_0(dto);
+            dto_service.WBH_AD_CRT_THEMSP(dto);
             return ResponseEntity.ok("Thêm sản phẩm thành công!");
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body("Thêm sản phẩm thất bại: " + e.getMessage());

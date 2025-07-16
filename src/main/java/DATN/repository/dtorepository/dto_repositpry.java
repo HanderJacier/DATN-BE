@@ -15,8 +15,8 @@ public class dto_repositpry implements dto_custom{
     private JdbcTemplate jdbcTemplate;
 
     @Override
-    public void DATN_CRE_SP_DB00001_0(DTO_CREATE dto) {
-        String sql = "EXEC DATN_CRE_SP_DB00001_0 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?";
+    public void WBH_AD_CRT_THEMSP(DTO_CREATE dto) {
+        String sql = "EXEC WBH_AD_CRT_THEMSP ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?";
 
         jdbcTemplate.update(sql,
             dto.getTensanpham(),
@@ -41,7 +41,9 @@ public class dto_repositpry implements dto_custom{
             dto.getScreen(),
             dto.getMausac(),
             dto.getSoluong(),
-            dto.getDiachianh()
+            dto.getDiachianh(),
+            dto.getLoaigiam(),
+            dto.getHangiamgia()
         );
     }
 

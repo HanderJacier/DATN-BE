@@ -6,7 +6,7 @@ import DATN.dto.dtodata.DTO_CREATE;
 import DATN.dto.dtodata.DTO_DETAILS;
 
 public interface dto_custom {
-    void DATN_CRE_SP_DB00001_0(DTO_CREATE dto);
+    void WBH_AD_CRT_THEMSP(DTO_CREATE dto);
     List<DTO_DETAILS> DATN_SEL_SP_DB00001_1(int id_sp);
     List<DTO_DETAILS> DATN_SEL_SP_DB00001_2();
     List<DTO_DETAILS> DATN_SEL_SP_DB00001_3();

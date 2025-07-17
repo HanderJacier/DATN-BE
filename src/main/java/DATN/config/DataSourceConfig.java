@@ -13,8 +13,8 @@ public class DataSourceConfig {
     @Bean
     public DataSource dataSource() {
         String[] urls = {
-            "jdbc:sqlserver://26.142.28.217:1433;databaseName=DATN_WebBHDT;encrypt=false",
-            "jdbc:sqlserver://localhost:1433;databaseName=DATN_WebBHDT;encrypt=false"
+                "jdbc:sqlserver://26.142.28.217:1433;databaseName=DATN_WebBHDT;encrypt=false",
+                "jdbc:sqlserver://localhost:1433;databaseName=DATN_WebBHDT;encrypt=false"
         };
 
         String username = "DEV_BACKEND";

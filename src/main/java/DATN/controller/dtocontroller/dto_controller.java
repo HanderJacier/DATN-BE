@@ -88,33 +88,34 @@ public class dto_controller {
 
     // Lấy toàn bộ dữ liệu góp ý
     @GetMapping("/gop-y")
-    public ResponseEntity<List<DTO_DETAILS>> DATN_SEL_GY_DB00002_1(@RequestParam  int p_pageNo, @RequestParam  int p_pageSize) {
+    public ResponseEntity<List<DTO_DETAILS>> DATN_SEL_GY_DB00002_1(@RequestParam int p_pageNo,
+            @RequestParam int p_pageSize) {
         return ResponseEntity.ok(dto_service.DATN_SEL_GY_DB00002_1(p_pageNo, p_pageSize));
     }
 }
 /*
-    {
-        "tensanpham": "Laptop X",
-        "dongia": 20000000,
-        "loai": 1,
-        "thuonghieu": 2,
-        "anhgoc": "image.jpg",
-        "cpuBrand": "Intel",
-        "cpuModel": "i5-1135G7",
-        "cpuType": "U",
-        "cpuMinSpeed": "2.4GHz",
-        "cpuMaxSpeed": "4.2GHz",
-        "cpuCores": "4",
-        "cpuThreads": "8",
-        "cpuCache": "8MB",
-        "gpuBrand": "NVIDIA",
-        "gpuModel": "MX450",
-        "gpuFullName": "NVIDIA GeForce MX450",
-        "gpuMemory": "2GB",
-        "ram": "16GB",
-        "rom": "512GB SSD",
-        "screen": "15.6 inch FHD",
-        "mausac": "Đen",
-        "soluong": 10
-    }
-*/
+ * {
+ * "tensanpham": "Laptop X",
+ * "dongia": 20000000,
+ * "loai": 1,
+ * "thuonghieu": 2,
+ * "anhgoc": "image.jpg",
+ * "cpuBrand": "Intel",
+ * "cpuModel": "i5-1135G7",
+ * "cpuType": "U",
+ * "cpuMinSpeed": "2.4GHz",
+ * "cpuMaxSpeed": "4.2GHz",
+ * "cpuCores": "4",
+ * "cpuThreads": "8",
+ * "cpuCache": "8MB",
+ * "gpuBrand": "NVIDIA",
+ * "gpuModel": "MX450",
+ * "gpuFullName": "NVIDIA GeForce MX450",
+ * "gpuMemory": "2GB",
+ * "ram": "16GB",
+ * "rom": "512GB SSD",
+ * "screen": "15.6 inch FHD",
+ * "mausac": "Đen",
+ * "soluong": 10
+ * }
+ */

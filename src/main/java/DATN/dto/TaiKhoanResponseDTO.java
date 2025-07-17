@@ -13,4 +13,5 @@ public class TaiKhoanResponseDTO {
     private String email;
     private String soDienThoai;
     private Boolean vaiTro;
+    private String matKhau;
 }

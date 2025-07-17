@@ -37,6 +37,7 @@ public class TaiKhoanService {
         }
 
         response.put("message", "Đăng nhập thành công");
+        response.put("idtk", taiKhoan.getId_tk());
         response.put("vaiTro", taiKhoan.getVaiTro() ? 1 : 0);
         response.put("hoVaTen", taiKhoan.getHoVaTen());
         response.put("tenDangNhap", taiKhoan.getTenDangNhap()); // ✅ thêm dòng này

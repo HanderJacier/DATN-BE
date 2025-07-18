@@ -1,8 +1,3 @@
-spring.jpa.hibernate.ddl-auto=none
-spring.jpa.show-sql=false
-spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.SQLServerDialect
-
-
 momo:
   partner-code: MOMOK8IO20250706_TEST
   access-key: yx3HDNvqLE2Tpdey

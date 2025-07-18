@@ -31,7 +31,7 @@ public class LoginController {
             // ✅ Lưu session
             session.setAttribute("username", result.get("tenDangNhap"));
             session.setAttribute("vaiTro", result.get("vaiTro"));
-            session.setAttribute("userId", result.get("id_tk")); // Lưu ID tài khoản
+            session.setAttribute("userId", result.get("idtk")); // Lưu ID tài khoản
 
             return ResponseEntity.ok(result);
         } else {
@@ -68,14 +68,14 @@ public class LoginController {
     public ResponseEntity<?> kiemTraPhien(HttpSession session) {
         Object username = session.getAttribute("username");
         Object vaiTro = session.getAttribute("vaiTro");
-        Object id_tk = session.getAttribute("id_tk"); // ✅ đổi tên
+        Object userId = session.getAttribute("userId"); // ✅ đổi tên
 
         if (username != null) {
             return ResponseEntity.ok(Map.of(
                     "message", "Đã đăng nhập",
                     "username", username,
                     "vaiTro", vaiTro,
-                    "id_tk", id_tk // ✅ đúng key
+                    "userId", userId // ✅ đúng key
             ));
         } else {
             return ResponseEntity.status(401).body(Map.of("message", "Chưa đăng nhập"));

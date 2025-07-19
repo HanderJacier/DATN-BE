@@ -48,7 +48,7 @@ public class dto_service {
     Random rand = new Random();
 
     public void generateProducts() {
-        for (int i = 1; i <= 10; i++) {
+        for (int i = 1; i <= 100; i++) {
             Map<String, Object> payload = new HashMap<>();
             payload.put("tensanpham", "iPhone 14 Pro " + i);
             payload.put("dongia", 25990000 + i * 100);

@@ -1,6 +1,6 @@
 package DATN.dto.dtodata;
 
-import java.time.LocalDate;
+import java.util.Date;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
@@ -18,8 +18,8 @@ public class DTO_DETAILS {
     private Integer thuonghieu;
     private String thuonghieuTen;
     private String anhgoc;
-    private LocalDate hangiamgia;
-    private LocalDate ngaytao;
+    private Date hangiamgia;
+    private Date ngaytao;
     private Integer loaigiam;
     private String loaigiamTen;
 
@@ -51,8 +51,8 @@ public class DTO_DETAILS {
     private Integer id_gy;
     private Integer taikhoan;
     private String gy_noidung;
-    private LocalDate gy_ngaytao;
-    private LocalDate gy_ngaycapnhat;
+    private Date gy_ngaytao;
+    private Date gy_ngaycapnhat;
 
     // Đánh giá
     private Integer id_dg;

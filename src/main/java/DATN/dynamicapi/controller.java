@@ -1,13 +1,16 @@
 package DATN.dynamicapi;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/api/datn")
 public class controller {
@@ -64,5 +67,32 @@ public class controller {
         entity dto = new entity();
         dto.setFields(row);
         return dto;
+    }
+
+    @GetMapping("/swagger/{procedureName}")
+    public Map<String, Object> inspectProcedure(@PathVariable String procedureName) {
+        Map<String, Object> result = new HashMap<>();
+
+        // Metadata từ tên procedure
+        Map<String, String> meta = service.parseProcedureName(procedureName);
+
+        // Danh sách input params (nếu có)
+        List<Map<String, Object>> inputParams = service.getProcedureInputParams2(procedureName);
+
+        // Tạo dummy params = NULL cho việc FMTONLY
+        Map<String, Object> dummyInputs = new HashMap<>();
+        for (Map<String, Object> param : inputParams) {
+            Object name = param.get("PARAMETER_NAME");
+            if (name != null) dummyInputs.put(name.toString().replace("@", ""), null);
+        }
+
+        // Lấy danh sách output fields
+        List<String> outputFields = service.getProcedureOutputFields(procedureName, dummyInputs);
+
+        result.put("inputParams", inputParams);
+        result.put("outputFields", outputFields);
+        result.put("meta", meta);
+
+        return result;
     }
 }

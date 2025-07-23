@@ -586,6 +586,127 @@ BEGIN
     FROM GIAM_GIA
 END;
 GO
+-- WBH_US_SEL_LOGIN_USER
+CREATE PROCEDURE WBH_US_SEL_LOGIN_USER
+    @p_tendangnhap NVARCHAR(255),
+    @p_matkhau NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @p_rtn_value INT;
+
+    BEGIN TRY
+        -- 1. Kiểm tra dữ liệu đầu vào
+        IF (@p_tendangnhap IS NULL OR LTRIM(RTRIM(@p_tendangnhap)) = '')
+        BEGIN
+            SET @p_rtn_value = 1;
+            SELECT @p_rtn_value AS rtn_value;
+            RETURN;
+        END
+
+        IF (@p_matkhau IS NULL OR LTRIM(RTRIM(@p_matkhau)) = '')
+        BEGIN
+            SET @p_rtn_value = 2;
+            SELECT @p_rtn_value AS rtn_value;
+            RETURN;
+        END
+
+        -- 2. Tìm tài khoản
+        DECLARE @id_tk INT,
+                @matkhau_db NVARCHAR(255),
+                @trangthai BIT;
+
+        SELECT 
+            @id_tk = id_tk,
+            @matkhau_db = matkhau,
+            @trangthai = trangthai
+        FROM TAI_KHOAN
+        WHERE tendangnhap = @p_tendangnhap;
+
+        IF (@id_tk IS NULL)
+        BEGIN
+            SET @p_rtn_value = 3;
+            SELECT @p_rtn_value AS rtn_value;
+            RETURN;
+        END
+
+        IF (@matkhau_db <> @p_matkhau)
+        BEGIN
+            SET @p_rtn_value = 4;
+            SELECT @p_rtn_value AS rtn_value;
+            RETURN;
+        END
+
+        IF (@trangthai = 0)
+        BEGIN
+            SET @p_rtn_value = 5;
+            SELECT @p_rtn_value AS rtn_value;
+            RETURN;
+        END
+
+        -- Đăng nhập thành công
+        SET @p_rtn_value = 0;
+
+        -- Trả thông tin tài khoản
+        SELECT 
+            id_tk,
+            tendangnhap,
+            vaitro,
+            hoveten,
+            sodienthoai,
+            email,
+            ngaytao,
+            ngaycapnhat
+        FROM TAI_KHOAN
+        WHERE id_tk = @id_tk;
+        -- Trả mã kết quả
+        SELECT @p_rtn_value AS rtn_value;
+    END TRY
+    BEGIN CATCH
+        SET @p_rtn_value = 99;
+        SELECT @p_rtn_value AS rtn_value;
+    END CATCH
+END;
+GO
+-- WBH_US_CRT_CREATE_ACCOUNT
+CREATE PROCEDURE WBH_US_CRT_CREATE_ACCOUNT
+    @p_tendangnhap NVARCHAR(255),
+    @p_matkhau NVARCHAR(255),
+    @p_hoveten NVARCHAR(255),
+    @p_sodienthoai VARCHAR(15),
+    @p_email NVARCHAR(255),
+    @p_vaitro BIT = 0,
+    @p_trangthai BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @rtn_value INT;
+
+    -- Validate
+    IF EXISTS (SELECT 1 FROM TAI_KHOAN WHERE tendangnhap = @p_tendangnhap)
+        SET @rtn_value = -1;
+    ELSE IF EXISTS (SELECT 1 FROM TAI_KHOAN WHERE sodienthoai = @p_sodienthoai)
+        SET @rtn_value = -2;
+    ELSE IF EXISTS (SELECT 1 FROM TAI_KHOAN WHERE email = @p_email)
+        SET @rtn_value = -3;
+    ELSE IF @p_email NOT LIKE '%_@__%.__%'
+        SET @rtn_value = -4;
+    ELSE IF @p_sodienthoai NOT LIKE '[0-9][0-9][0-9]%' OR LEN(@p_sodienthoai) NOT IN (10, 11)
+        SET @rtn_value = -5;
+    ELSE
+    BEGIN
+        INSERT INTO TAI_KHOAN (tendangnhap, matkhau, hoveten, sodienthoai, email, vaitro, trangthai, ngaycapnhat)
+        VALUES (@p_tendangnhap, @p_matkhau, @p_hoveten, @p_sodienthoai, @p_email, @p_vaitro, @p_trangthai, GETDATE());
+
+        SET @rtn_value = 0;
+    END
+
+    -- Trả về kết quả cuối cùng
+    SELECT @rtn_value AS rtn_value;
+END
+GO
 /*===== CHECK TRIGGER =====*/
 SELECT
     t.name AS TriggerName, 

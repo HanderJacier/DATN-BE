@@ -439,7 +439,6 @@ CREATE PROCEDURE WBH_AD_UPD_SUASP
     @p_loai INT,
     @p_thuonghieu INT,
     @p_anhgoc NVARCHAR(255),
-    @p_id_ts INT,
     @p_cpuBrand NVARCHAR(255),
     @p_cpuModel NVARCHAR(255),
     @p_cpuType NVARCHAR(255),
@@ -496,7 +495,7 @@ BEGIN
             screen = @p_screen,
             mausac = @p_mausac,
             soluong = @p_soluong
-        WHERE id_ts = @p_id_ts;
+        WHERE sanpham = @p_id_sp;
 
         -- Cập nhật bảng ANH_SP
         UPDATE ANH_SP

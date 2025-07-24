@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
-
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -14,7 +13,6 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-
 import javax.sql.DataSource;
 
 @Service
@@ -31,38 +29,31 @@ public class service {
     public List<Map<String, Object>> callProcedure(String procedureName, Map<String, Object> params) {
         Matcher matcher = PROCEDURE_NAME_PATTERN.matcher(procedureName);
         if (!matcher.matches()) {
-            throw new IllegalArgumentException("Invalid or unsafe procedure name: " + procedureName);
+            throw new IllegalArgumentException("Tên thủ tục không hợp lệ hoặc không an toàn: " + procedureName);
         }
-
         StringBuilder sql = new StringBuilder("EXEC ").append(procedureName);
         Object[] paramValues = new Object[0];
-
         if (params != null && !params.isEmpty()) {
             String paramPlaceholders = params.keySet().stream()
-                    .map(key -> "@" + key + "=?")
-                    .collect(Collectors.joining(", "));
+                .map(key -> "@" + key + "=?")
+                .collect(Collectors.joining(", "));
             sql.append(" ").append(paramPlaceholders);
             paramValues = params.values().toArray();
         }
-
         logProcedureCall(procedureName, params);
-
         try {
             List<Map<String, Object>> result = jdbcTemplate.queryForList(sql.toString(), paramValues);
-
             if (result == null || result.isEmpty()) {
-                return List.of(Map.of("message", "Procedure executed successfully but returned no data"));
+                return List.of(Map.of("message", "Quy trình được thực hiện thành công nhưng không trả về dữ liệu"));
             }
-
             return result;
         } catch (org.springframework.dao.DataAccessException e) {
-            // fallback khi procedure không có SELECT → dùng update
             try {
                 return List.of(Map.of(
-                        "message", "Procedure executed successfully (no result set)"
+                    "message", "Quy trình được thực hiện thành công (không có kết quả nào được đặt)"
                 ));
             } catch (Exception ex) {
-                throw new RuntimeException("Failed to execute procedure: " + ex.getMessage(), ex);
+                throw new RuntimeException("Không thực hiện được thủ tục: " + ex.getMessage(), ex);
             }
         }
     }
@@ -87,18 +78,14 @@ public class service {
 
     public List<String> getProcedureOutputFields(String procedureName, Map<String, Object> dummyParams) {
         List<String> columns = new ArrayList<>();
-
         StringBuilder execProc = new StringBuilder("SET FMTONLY ON; EXEC ").append(procedureName);
-
         if (dummyParams != null && !dummyParams.isEmpty()) {
             String paramStr = dummyParams.keySet().stream()
                     .map(key -> "@" + key + "=NULL")
                     .collect(Collectors.joining(", "));
             execProc.append(" ").append(paramStr);
         }
-
         execProc.append("; SET FMTONLY OFF;");
-
         try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
             boolean hasResult = stmt.execute(execProc.toString());
             if (hasResult) {
@@ -110,9 +97,8 @@ public class service {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-            throw new RuntimeException("Error fetching procedure output fields: " + e.getMessage(), e);
+            throw new RuntimeException("Lỗi khi tìm nạp các trường đầu ra của quy trình: " + e.getMessage(), e);
         }
-
         return columns;
     }
 
@@ -121,7 +107,6 @@ public class service {
                 "FROM INFORMATION_SCHEMA.PARAMETERS " +
                 "WHERE SPECIFIC_NAME = :procName " +
                 "ORDER BY ORDINAL_POSITION";
-
         Map<String, Object> params = Map.of("procName", procedureName);
         return namedJdbcTemplate.queryForList(sql, params);
     }
@@ -129,11 +114,9 @@ public class service {
     public Map<String, String> parseProcedureName(String procedureName) {
         Pattern pattern = Pattern.compile("^WBH_(US|AD)_(SEL|CRT|UPD|DEL)_([A-Za-z0-9_]+)$");
         Matcher matcher = pattern.matcher(procedureName);
-
         if (!matcher.matches()) {
-            throw new IllegalArgumentException("Procedure name does not follow the required pattern.");
+            throw new IllegalArgumentException("Tên thủ tục không tuân theo mẫu yêu cầu.");
         }
-
         Map<String, String> result = new HashMap<>();
         result.put("role", matcher.group(1).equals("US") ? "User" : "Admin");
         result.put("action", switch (matcher.group(2)) {
@@ -143,8 +126,7 @@ public class service {
             case "DEL" -> "Delete";
             default -> "Unknown";
         });
-        result.put("entity", matcher.group(3)); // Ví dụ: XEMSP
-
+        result.put("entity", matcher.group(3));
         return result;
     }
 

@@ -77,7 +77,6 @@ CREATE TABLE TAI_KHOAN(
 	ngaycapnhat DATE 
 );
 GO
-
 -- DIA_CHI
 CREATE TABLE DIA_CHI(
 	id_dc INT IDENTITY(1,1)  PRIMARY KEY,
@@ -85,7 +84,6 @@ CREATE TABLE DIA_CHI(
 	diachi NVARCHAR(255) ,
 );
 GO
-
 -- SAN_PHAM
 CREATE TABLE SAN_PHAM(
 	id_sp INT IDENTITY(1,1)  PRIMARY KEY,
@@ -101,28 +99,24 @@ CREATE TABLE SAN_PHAM(
 	hangiamgia DATE
 ); 
 GO
-
 -- GIAM_GIA
 CREATE TABLE GIAM_GIA (
     id_gg INT IDENTITY(1,1) PRIMARY KEY,
     loaigiamTen DECIMAL(18) DEFAULT 0 CHECK(loaigiamTen >= 0)
 );
 GO
-
 -- SP_LOAI
 CREATE TABLE SP_LOAI(
 	id_l INT IDENTITY(1,1)  PRIMARY KEY,
 	loaiTen NVARCHAR(255) ,
 );
 GO
-
 -- SP_THUONG_HIEU
 CREATE TABLE SP_THUONG_HIEU(
 	id_th INT IDENTITY(1,1)  PRIMARY KEY,
 	thuonghieuTen NVARCHAR(255) ,
 );
 GO
-
 -- SP_THONG_SO
 CREATE TABLE SP_THONG_SO(
 	id_ts INT IDENTITY(1,1)  PRIMARY KEY,
@@ -146,7 +140,6 @@ CREATE TABLE SP_THONG_SO(
 	soluong INT DEFAULT 0 CHECK (soluong>= 0) ,
 );
 GO
-
 -- ANH_SP
 CREATE TABLE ANH_SP(
 	id_a INT IDENTITY(1,1)  PRIMARY KEY,
@@ -154,7 +147,6 @@ CREATE TABLE ANH_SP(
 	diachianh NVARCHAR(255) ,
 );
 GO
-
 -- HOA_DON
 CREATE TABLE HOA_DON(
 	id_hd INT IDENTITY(1,1)  PRIMARY KEY,
@@ -165,7 +157,6 @@ CREATE TABLE HOA_DON(
 	noidung NVARCHAR(255) ,
 );
 GO
-
 -- HD_CHI_TIET
 CREATE TABLE HD_CHI_TIET(
 	id_hdct INT IDENTITY(1,1)  PRIMARY KEY,
@@ -175,7 +166,6 @@ CREATE TABLE HD_CHI_TIET(
 	soluong INT DEFAULT 0 CHECK (soluong>= 0) ,
 );
 GO
-
 -- THANH_TOAN
 CREATE TABLE THANH_TOAN(
 	id_tt INT IDENTITY(1,1)  PRIMARY KEY,
@@ -188,7 +178,6 @@ CREATE TABLE THANH_TOAN(
 	ngaytao DATE DEFAULT GETDATE() ,
 );
 GO
-
 -- GIO_HANG
 CREATE TABLE GIO_HANG(
 	id_gh INT IDENTITY(1,1)  PRIMARY KEY,
@@ -196,7 +185,6 @@ CREATE TABLE GIO_HANG(
 	taikhoan INT ,
 );
 GO
-
 -- GOP_Y
 CREATE TABLE GOP_Y(
 	id_gy INT IDENTITY(1,1)  PRIMARY KEY,
@@ -206,7 +194,6 @@ CREATE TABLE GOP_Y(
     ngaycapnhat DATE
 );
 GO
-
 -- DANH_GIA
 CREATE TABLE DANH_GIA(
 	id_dg INT IDENTITY(1,1)  PRIMARY KEY,
@@ -217,7 +204,6 @@ CREATE TABLE DANH_GIA(
 	ngaytao DATE DEFAULT GETDATE()
 );
 GO
-
 -- YEU_THICH
 CREATE TABLE YEU_THICH(
 	id_yt INT IDENTITY(1,1)  PRIMARY KEY,
@@ -226,7 +212,6 @@ CREATE TABLE YEU_THICH(
     trangthai NVARCHAR(5)
 );
 GO
-
 /*===== VIEW =====*/
 CREATE VIEW vw_SanPham_ChiTiet
 AS
@@ -296,7 +281,6 @@ LEFT JOIN ANH_SP A ON SP.id_sp = A.sanpham
 LEFT JOIN DANH_GIA DG ON SP.id_sp = DG.sanpham
 LEFT JOIN YEU_THICH YT ON SP.id_sp = YT.sanpham
 GO
-
 /*===== TRIGGER =====*/
 --trg_auto_dayedit_taikhoan
 CREATE TRIGGER trg_auto_dayedit_taikhoan
@@ -312,7 +296,6 @@ BEGIN
     INNER JOIN inserted i ON TAI_KHOAN.id_tk = i.id_tk;
 END;
 GO
-
 --trg_auto_giagiam_sanpham
 CREATE TRIGGER trg_upsert_giagiam_sanpham
 ON SAN_PHAM
@@ -328,9 +311,7 @@ BEGIN
     JOIN inserted i ON sp.id_sp = i.id_sp;
 END;
 GO
-
 /*===== PROC =====*/
--- ========== SẢN PHẨM ==========
 -- DATN_CRE_SP_DB00001_0
 CREATE PROCEDURE WBH_AD_CRT_THEMSP
     @p_tensanpham NVARCHAR(255),
@@ -384,7 +365,6 @@ BEGIN
     END CATCH
 END;
 GO
-
 -- DATN_CRE_SP_DB00001_1
 CREATE PROCEDURE WBH_US_SEL_DETAIL_SP
     @p_id_sp INT 
@@ -400,7 +380,6 @@ BEGIN
         id_sp = @p_id_sp;
 END;
 GO
-
 -- DATN_CRE_SP_DB00001_2
 CREATE PROCEDURE WBH_US_SEL_XEMSP
 AS
@@ -413,7 +392,6 @@ BEGIN
         vw_SanPham_ChiTiet
 END;
 GO
-
 -- DATN_CRE_SP_DB00001_3
 CREATE PROCEDURE WBH_US_SEL_NGAYTAOSP
 AS
@@ -425,7 +403,6 @@ BEGIN
     ORDER BY ngaytao DESC;
 END;
 GO
-
 -- DATN_CRE_SP_DB00001_4
 CREATE PROCEDURE WBH_US_SEL_RANKYTSP
 AS
@@ -446,7 +423,6 @@ BEGIN
         YT.SoYeuThich DESC;
 END;
 GO
-
 -- DATN_CRE_SP_DB00001_5 
 CREATE PROCEDURE WBH_US_SEL_SALESP
 AS
@@ -458,7 +434,6 @@ BEGIN
     WHERE hangiamgia >= GETDATE();
 END;
 GO
-
 -- DATN_CRE_SP_DB00001_6
 CREATE PROCEDURE WBH_AD_UPD_SUASP
     @p_id_sp INT,
@@ -538,8 +513,6 @@ BEGIN
     END CATCH
 END;
 GO
-
--- ========== GÓP Ý ==========
 -- DATN_CRE_GY_DB00002_0
 CREATE PROCEDURE WBH_US_CRT_GY
     @id_tk INT,
@@ -552,7 +525,6 @@ BEGIN
     VALUES (@id_tk, @noidung);
 END;
 GO
-
 -- DATN_CRE_GY_DB00002_1
 CREATE PROCEDURE WBH_AD_SEL_GY_PHAN_TRANG
     @p_pageNo INT,
@@ -571,8 +543,6 @@ BEGIN
     FETCH NEXT @p_pageSize ROWS ONLY;
 END;
 GO
-
--- ========== YÊU THÍCH ==========
 -- DATN_CRE_GY_DB00003_0
 CREATE PROCEDURE WBH_US_UPD_CAPNHAT_YT_SP
     @sanpham INT,
@@ -598,7 +568,7 @@ BEGIN
     END
 END;
 GO
--- DATN_CRE_SP_DB00001_3
+-- WBH_AD_SEL_getTAIKHOAN
 CREATE PROCEDURE WBH_AD_SEL_getTAIKHOAN
 AS
 BEGIN
@@ -609,7 +579,7 @@ BEGIN
     ORDER BY ngaytao DESC;
 END;
 GO
--- DATN_CRE_SP_DB00001_3
+-- WBH_AD_SEL_getGIAMGIA
 CREATE PROCEDURE WBH_AD_SEL_getGIAMGIA
 AS
 BEGIN
@@ -619,7 +589,6 @@ BEGIN
     FROM GIAM_GIA
 END;
 GO
--- ========== TÀI KHOẢN & LOGIN ==========
 -- WBH_US_SEL_LOGIN_USER
 CREATE PROCEDURE WBH_US_SEL_LOGIN_USER
     @p_tendangnhap NVARCHAR(255),
@@ -703,7 +672,6 @@ BEGIN
     END CATCH
 END;
 GO
-
 -- WBH_US_CRT_CREATE_ACCOUNT
 CREATE PROCEDURE WBH_US_CRT_CREATE_ACCOUNT
     @p_tendangnhap NVARCHAR(255),
@@ -742,9 +710,7 @@ BEGIN
     SELECT @rtn_value AS rtn_value;
 END
 GO
-
--- ========== QUẢN LÝ TÀI KHOẢN ==========
--- Lấy thông tin tài khoản
+-- WBH_US_SEL_THONG_TIN_TAI_KHOAN
 CREATE PROCEDURE WBH_US_SEL_THONG_TIN_TAI_KHOAN
     @p_id_tk INT
 AS
@@ -765,8 +731,7 @@ BEGIN
     WHERE id_tk = @p_id_tk;
 END;
 GO
-
--- Cập nhật thông tin tài khoản
+-- WBH_US_UPD_THONG_TIN_TAI_KHOAN
 CREATE PROCEDURE WBH_US_UPD_THONG_TIN_TAI_KHOAN
     @p_id_tk INT,
     @p_hoveten NVARCHAR(255),
@@ -802,7 +767,7 @@ BEGIN
 END;
 GO
 
--- Đổi mật khẩu
+-- WBH_US_UPD_DOI_MAT_KHAU
 CREATE PROCEDURE WBH_US_UPD_DOI_MAT_KHAU
     @p_id_tk INT,
     @p_matkhau_cu NVARCHAR(255),
@@ -837,9 +802,7 @@ BEGIN
     SELECT @rtn_value AS rtn_value;
 END;
 GO
-
--- ========== ADMIN - QUẢN LÝ NGƯỜI DÙNG ==========
--- Danh sách người dùng (phân trang + tìm kiếm)
+-- WBH_AD_SEL_DANH_SACH_NGUOI_DUNG
 CREATE PROCEDURE WBH_AD_SEL_DANH_SACH_NGUOI_DUNG
     @p_pageNo INT = 1,
     @p_pageSize INT = 10,
@@ -868,8 +831,7 @@ BEGIN
     FETCH NEXT @p_pageSize ROWS ONLY;
 END;
 GO
-
--- Khóa/Mở khóa tài khoản
+-- WBH_AD_UPD_TRANG_THAI_TAI_KHOAN
 CREATE PROCEDURE WBH_AD_UPD_TRANG_THAI_TAI_KHOAN
     @p_id_tk INT,
     @p_trangthai BIT
@@ -884,8 +846,7 @@ BEGIN
     SELECT @@ROWCOUNT AS affected_rows;
 END;
 GO
-
--- Phân quyền tài khoản
+-- WBH_AD_UPD_VAI_TRO_TAI_KHOAN
 CREATE PROCEDURE WBH_AD_UPD_VAI_TRO_TAI_KHOAN
     @p_id_tk INT,
     @p_vaitro BIT
@@ -900,42 +861,7 @@ BEGIN
     SELECT @@ROWCOUNT AS affected_rows;
 END;
 GO
-
--- Xóa tài khoản
-CREATE PROCEDURE WBH_AD_DEL_TAI_KHOAN
-    @p_id_tk INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    BEGIN TRY
-        BEGIN TRAN;
-        
-        -- Xóa các dữ liệu liên quan
-        DELETE FROM YEU_THICH WHERE taikhoan = @p_id_tk;
-        DELETE FROM DANH_GIA WHERE taikhoan = @p_id_tk;
-        DELETE FROM GOP_Y WHERE taikhoan = @p_id_tk;
-        DELETE FROM GIO_HANG WHERE taikhoan = @p_id_tk;
-        DELETE FROM THANH_TOAN WHERE taikhoan = @p_id_tk;
-        DELETE FROM HD_CHI_TIET WHERE hoadon IN (SELECT id_hd FROM HOA_DON WHERE taikhoan = @p_id_tk);
-        DELETE FROM HOA_DON WHERE taikhoan = @p_id_tk;
-        DELETE FROM DIA_CHI WHERE taikhoan = @p_id_tk;
-        
-        -- Xóa tài khoản
-        DELETE FROM TAI_KHOAN WHERE id_tk = @p_id_tk;
-        
-        COMMIT TRAN;
-        SELECT 1 AS success;
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0 ROLLBACK TRAN;
-        SELECT 0 AS success;
-    END CATCH
-END;
-GO
-
--- ========== THANH TOÁN & HÓA ĐƠN ==========
--- Tạo hóa đơn
+-- WBH_US_CRT_HOA_DON
 CREATE PROCEDURE WBH_US_CRT_HOA_DON
     @p_taikhoan INT,
     @p_giahoadon DECIMAL(18),
@@ -951,7 +877,7 @@ BEGIN
 END;
 GO
 
--- Thêm chi tiết hóa đơn
+-- WBH_US_CRT_HOA_DON_CHI_TIET
 CREATE PROCEDURE WBH_US_CRT_HOA_DON_CHI_TIET
     @p_hoadon INT,
     @p_sanpham INT,
@@ -973,7 +899,7 @@ BEGIN
 END;
 GO
 
--- Tạo thanh toán
+-- WBH_US_CRT_THANH_TOAN
 CREATE PROCEDURE WBH_US_CRT_THANH_TOAN
     @p_hoadon INT,
     @p_phuongthuc NVARCHAR(255),
@@ -996,7 +922,7 @@ BEGIN
 END;
 GO
 
--- Cập nhật trạng thái thanh toán (cho MoMo callback)
+-- WBH_US_UPD_TRANG_THAI_THANH_TOAN
 CREATE PROCEDURE WBH_US_UPD_TRANG_THAI_THANH_TOAN
     @p_magiaodich NVARCHAR(255),
     @p_trangthai NVARCHAR(255)
@@ -1027,7 +953,7 @@ BEGIN
 END;
 GO
 
--- Lịch sử đơn hàng của người dùng
+-- WBH_US_SEL_LICH_SU_DON_HANG
 CREATE PROCEDURE WBH_US_SEL_LICH_SU_DON_HANG
     @p_taikhoan INT,
     @p_pageNo INT = 1,
@@ -1054,7 +980,7 @@ BEGIN
 END;
 GO
 
--- Chi tiết hóa đơn
+-- WBH_US_SEL_CHI_TIET_HOA_DON
 CREATE PROCEDURE WBH_US_SEL_CHI_TIET_HOA_DON
     @p_id_hd INT
 AS
@@ -1100,9 +1026,7 @@ BEGIN
     WHERE tt.hoadon = @p_id_hd;
 END;
 GO
-
--- ========== ADMIN - QUẢN LÝ HÓA ĐƠN ==========
--- Tất cả hóa đơn (phân trang)
+-- WBH_AD_SEL_TAT_CA_HOA_DON
 CREATE PROCEDURE WBH_AD_SEL_TAT_CA_HOA_DON
     @p_pageNo INT = 1,
     @p_pageSize INT = 10,
@@ -1159,7 +1083,7 @@ BEGIN
 END;
 GO
 
--- Tìm kiếm hóa đơn
+-- WBH_AD_SEL_TIM_KIEM_HOA_DON
 CREATE PROCEDURE WBH_AD_SEL_TIM_KIEM_HOA_DON
     @p_keyword NVARCHAR(255) = NULL,
     @p_tu_ngay DATE = NULL,
@@ -1195,7 +1119,7 @@ BEGIN
 END;
 GO
 
--- Thống kê hóa đơn
+-- WBH_AD_SEL_THONG_KE_HOA_DON
 CREATE PROCEDURE WBH_AD_SEL_THONG_KE_HOA_DON
 AS
 BEGIN
@@ -1222,7 +1146,7 @@ BEGIN
 END;
 GO
 
--- Báo cáo doanh thu
+-- WBH_AD_SEL_BAO_CAO_DOANH_THU
 CREATE PROCEDURE WBH_AD_SEL_BAO_CAO_DOANH_THU
     @p_tu_ngay DATE,
     @p_den_ngay DATE
@@ -1243,9 +1167,7 @@ BEGIN
     ORDER BY ngay DESC;
 END;
 GO
-
--- ========== ĐÁNH GIÁ SẢN PHẨM ==========
--- Tạo đánh giá
+-- WBH_US_CRT_DANH_GIA
 CREATE PROCEDURE WBH_US_CRT_DANH_GIA
     @p_taikhoan INT,
     @p_sanpham INT,
@@ -1278,7 +1200,7 @@ BEGIN
 END;
 GO
 
--- Lấy đánh giá theo sản phẩm
+-- WBH_US_SEL_DANH_GIA_THEO_SP
 CREATE PROCEDURE WBH_US_SEL_DANH_GIA_THEO_SP
     @p_sanpham INT,
     @p_pageNo INT = 1,
@@ -1318,7 +1240,7 @@ BEGIN
 END;
 GO
 
--- Thống kê đánh giá sản phẩm
+-- WBH_US_SEL_THONG_KE_DANH_GIA
 CREATE PROCEDURE WBH_US_SEL_THONG_KE_DANH_GIA
     @p_sanpham INT
 AS
@@ -1337,15 +1259,7 @@ BEGIN
     WHERE sanpham = @p_sanpham;
 END;
 GO
-
-
-
-
-PRINT N'✅ Đã thêm các stored procedures cho chức năng giỏ hàng!';
-PRINT N'📊 Tổng cộng có ' + CAST((SELECT COUNT(*) FROM sys.procedures WHERE is_ms_shipped = 0) AS NVARCHAR) + N' procedures trong database';
-GO
--- ========== MOMO PAYMENT ==========
--- Tạo MoMo payment request
+-- WBH_US_CRT_MOMO_PAYMENT
 CREATE PROCEDURE WBH_US_CRT_MOMO_PAYMENT
     @p_orderId NVARCHAR(255),
     @p_amount DECIMAL(18),
@@ -1375,7 +1289,7 @@ BEGIN
 END;
 GO
 
--- Xử lý MoMo callback
+-- WBH_US_UPD_MOMO_CALLBACK
 CREATE PROCEDURE WBH_US_UPD_MOMO_CALLBACK
     @p_orderId NVARCHAR(255),
     @p_resultCode INT,
@@ -1427,7 +1341,7 @@ BEGIN
 END;
 GO
 
--- Kiểm tra trạng thái thanh toán MoMo
+-- WBH_US_SEL_MOMO_STATUS
 CREATE PROCEDURE WBH_US_SEL_MOMO_STATUS
     @p_orderId NVARCHAR(255)
 AS
@@ -1449,29 +1363,6 @@ BEGIN
     WHERE tt.magiaodich = @p_orderId;
 END;
 GO
-
--- ========== ADMIN UTILITIES ==========
-CREATE PROCEDURE WBH_AD_SEL_getTAIKHOAN
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    SELECT * 
-    FROM TAI_KHOAN
-    ORDER BY ngaytao DESC;
-END;
-GO
-
-CREATE PROCEDURE WBH_AD_SEL_getGIAMGIA
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    SELECT * 
-    FROM GIAM_GIA
-END;
-GO
-
 /*===== CHECK TRIGGER =====*/
 SELECT
     t.name AS TriggerName, 
@@ -1571,8 +1462,4 @@ VALUES
 (N'user8', N'123456', 0, N'Đặng Thị H', '0900000008', N'user8@example.com', 1),
 (N'user9', N'123456', 0, N'Bùi Văn I', '0900000009', N'user9@example.com', 1),
 (N'user10', N'123456', 0, N'Vũ Thị J', '0900000010', N'user10@example.com', 1);
-GO
-
-PRINT N'✅ Database DATN_WebBHDT đã được tạo thành công với đầy đủ procedures!';
-PRINT N'📊 Tổng cộng có ' + CAST((SELECT COUNT(*) FROM sys.procedures WHERE is_ms_shipped = 0) AS NVARCHAR) + N' procedures được tạo';
 GO

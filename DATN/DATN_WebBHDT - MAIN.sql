@@ -357,6 +357,8 @@ BEGIN
         );
         INSERT INTO ANH_SP (sanpham, diachianh)
         VALUES (@NewProductID, @p_anhphu);
+        SELECT 
+            'SUCCESS' AS status
         COMMIT TRAN;
     END TRY
     BEGIN CATCH
@@ -504,12 +506,18 @@ BEGIN
         UPDATE ANH_SP
         SET diachianh = @p_anhphu
         WHERE sanpham = @p_id_sp;
-
         COMMIT TRAN;
+        SELECT 
+            'SUCCESS' AS status
     END TRY
     BEGIN CATCH
         IF @@TRANCOUNT > 0 ROLLBACK TRAN;
-        THROW;
+
+        SELECT 
+            'FAIL' AS status,
+            ERROR_NUMBER() AS error_number,
+            ERROR_MESSAGE() AS error_message,
+            ERROR_LINE() AS error_line;
     END CATCH
 END;
 GO
@@ -523,6 +531,8 @@ BEGIN
 
     INSERT INTO GOP_Y(taikhoan, noidung)
     VALUES (@id_tk, @noidung);
+
+    SELECT 1
 END;
 GO
 -- DATN_CRE_GY_DB00002_1

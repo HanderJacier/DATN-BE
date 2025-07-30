@@ -742,6 +742,226 @@ BEGIN
     SELECT @rtn_value AS rtn_value;
 END
 GO
+-- ========== STORED PROCEDURES CHO ĐẶT HÀNG ==========
+
+-- Tạo đơn hàng mới (không cần session)
+CREATE OR ALTER PROCEDURE WBH_US_CRT_DAT_HANG
+    @p_hoveten NVARCHAR(255),
+    @p_sodienthoai VARCHAR(15),
+    @p_email NVARCHAR(255) = NULL,
+    @p_diachi NVARCHAR(255),
+    @p_noidung NVARCHAR(255),
+    @p_trangthai NVARCHAR(255) = N'Chờ xác nhận',
+    @p_sanphams NVARCHAR(MAX) -- JSON array
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @rtn_value INT;
+    DECLARE @id_hd INT;
+    DECLARE @tong_gia DECIMAL(18, 2) = 0;
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        -- Tính tổng tiền từ JSON
+        SELECT @tong_gia = SUM(
+            TRY_CAST(JSON_VALUE(value, '$.dongia') AS DECIMAL(18,2)) * 
+            TRY_CAST(JSON_VALUE(value, '$.soluong') AS INT)
+        )
+        FROM OPENJSON(@p_sanphams);
+        
+        -- Tạo tài khoản khách hàng tạm thời nếu chưa có
+        DECLARE @id_tk INT = NULL;
+        
+        -- Kiểm tra xem đã có tài khoản với SĐT này chưa
+        SELECT @id_tk = id_tk 
+        FROM TAI_KHOAN 
+        WHERE sodienthoai = @p_sodienthoai;
+        
+        -- Nếu chưa có thì tạo tài khoản khách hàng
+        IF @id_tk IS NULL
+        BEGIN
+            INSERT INTO TAI_KHOAN (
+                tendangnhap, 
+                matkhau, 
+                hoveten, 
+                sodienthoai, 
+                email, 
+                vaitro, 
+                trangthai,
+                ngaycapnhat
+            )
+            VALUES (
+                @p_sodienthoai, -- Dùng SĐT làm username
+                'guest123', -- Mật khẩu mặc định cho khách
+                @p_hoveten,
+                @p_sodienthoai,
+                @p_email,
+                0, -- Vai trò khách hàng
+                1, -- Trạng thái active
+                GETDATE()
+            );
+            
+            SET @id_tk = SCOPE_IDENTITY();
+        END
+        
+        -- Tạo hóa đơn
+        INSERT INTO HOA_DON (taikhoan, ngaytao, giahoadon, trangthai, noidung)
+        VALUES (@id_tk, GETDATE(), @tong_gia, @p_trangthai, @p_noidung);
+        
+        SET @id_hd = SCOPE_IDENTITY();
+        
+        -- Thêm chi tiết hóa đơn và cập nhật kho
+        INSERT INTO HD_CHI_TIET (hoadon, sanpham, dongia, soluong)
+        SELECT
+            @id_hd,
+            TRY_CAST(JSON_VALUE(value, '$.sanpham') AS INT),
+            TRY_CAST(JSON_VALUE(value, '$.dongia') AS DECIMAL(18,2)),
+            TRY_CAST(JSON_VALUE(value, '$.soluong') AS INT)
+        FROM OPENJSON(@p_sanphams);
+        
+        -- Cập nhật số lượng trong kho
+        UPDATE ts
+        SET ts.soluong = ts.soluong - hdct.soluong
+        FROM SP_THONG_SO ts
+        INNER JOIN HD_CHI_TIET hdct ON ts.sanpham = hdct.sanpham
+        WHERE hdct.hoadon = @id_hd;
+        
+        -- Tạo bản ghi thanh toán (COD)
+        INSERT INTO THANH_TOAN (
+            hoadon, 
+            phuongthuc, 
+            sotien, 
+            ngaythanhtoan, 
+            magiaodich, 
+            taikhoan
+        )
+        VALUES (
+            @id_hd,
+            'COD', -- Cash on Delivery
+            @tong_gia,
+            NULL, -- Chưa thanh toán
+            'COD_' + CAST(@id_hd AS NVARCHAR(10)),
+            @id_tk
+        );
+        
+        COMMIT TRANSACTION;
+        
+        -- Trả kết quả thành công
+        SET @rtn_value = 0;
+        SELECT 
+            @rtn_value AS rtn_value, 
+            N'Đặt hàng thành công' AS message, 
+            @id_hd AS id_hd,
+            @id_tk AS id_tk;
+            
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+            
+        SET @rtn_value = -1;
+        SELECT 
+            @rtn_value AS rtn_value, 
+            ERROR_MESSAGE() AS message,
+            NULL AS id_hd,
+            NULL AS id_tk;
+    END CATCH
+END;
+GO
+
+-- Lấy chi tiết đơn hàng vừa tạo
+CREATE OR ALTER PROCEDURE WBH_US_SEL_CHI_TIET_DON_HANG
+    @p_id_hd INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    -- Thông tin hóa đơn
+    SELECT
+        hd.id_hd,
+        hd.taikhoan,
+        tk.hoveten,
+        tk.sodienthoai,
+        tk.email,
+        hd.ngaytao,
+        hd.giahoadon,
+        hd.trangthai,
+        hd.noidung
+    FROM HOA_DON hd
+    INNER JOIN TAI_KHOAN tk ON hd.taikhoan = tk.id_tk
+    WHERE hd.id_hd = @p_id_hd;
+    
+    -- Chi tiết sản phẩm
+    SELECT
+        hdct.id_hdct,
+        hdct.sanpham,
+        sp.tensanpham,
+        sp.anhgoc,
+        hdct.dongia,
+        hdct.soluong,
+        (hdct.dongia * hdct.soluong) AS thanhtien
+    FROM HD_CHI_TIET hdct
+    INNER JOIN SAN_PHAM sp ON hdct.sanpham = sp.id_sp
+    WHERE hdct.hoadon = @p_id_hd;
+    
+    -- Thông tin thanh toán
+    SELECT
+        tt.id_tt,
+        tt.phuongthuc,
+        tt.sotien,
+        tt.ngaythanhtoan,
+        tt.magiaodich
+    FROM THANH_TOAN tt
+    WHERE tt.hoadon = @p_id_hd;
+END;
+GO
+
+-- Cập nhật trạng thái đơn hàng
+CREATE OR ALTER PROCEDURE WBH_US_UPD_TRANG_THAI_DON_HANG
+    @p_id_hd INT,
+    @p_trangthai NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    UPDATE HOA_DON
+    SET trangthai = @p_trangthai
+    WHERE id_hd = @p_id_hd;
+    
+    SELECT 
+        0 AS rtn_value,	
+        N'Cập nhật trạng thái thành công' AS message,
+        @@ROWCOUNT AS affected_rows;
+END;
+GO
+
+-- Lấy danh sách đơn hàng theo số điện thoại (cho khách hàng tra cứu)
+CREATE OR ALTER PROCEDURE WBH_US_SEL_DON_HANG_THEO_SDT
+    @p_sodienthoai VARCHAR(15)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT
+        hd.id_hd,
+        hd.ngaytao,
+        hd.giahoadon,
+        hd.trangthai,
+        hd.noidung,
+        tk.hoveten,
+        tt.phuongthuc,
+        tt.magiaodich,
+        tt.ngaythanhtoan
+    FROM HOA_DON hd
+    INNER JOIN TAI_KHOAN tk ON hd.taikhoan = tk.id_tk
+    LEFT JOIN THANH_TOAN tt ON hd.id_hd = tt.hoadon
+    WHERE tk.sodienthoai = @p_sodienthoai
+    ORDER BY hd.ngaytao DESC;
+END;
+GO
+
+PRINT N'✅ Đã tạo thành công các stored procedures cho đặt hàng!';
 
 -- ========== QUẢN LÝ TÀI KHOẢN ==========
 -- Lấy thông tin tài khoản
@@ -837,6 +1057,226 @@ BEGIN
     SELECT @rtn_value AS rtn_value;
 END;
 GO
+-- ========== STORED PROCEDURES CHO ĐẶT HÀNG ==========
+
+-- Tạo đơn hàng mới (không cần session)
+CREATE OR ALTER PROCEDURE WBH_US_CRT_DAT_HANG
+    @p_hoveten NVARCHAR(255),
+    @p_sodienthoai VARCHAR(15),
+    @p_email NVARCHAR(255) = NULL,
+    @p_diachi NVARCHAR(255),
+    @p_noidung NVARCHAR(255),
+    @p_trangthai NVARCHAR(255) = N'Chờ xác nhận',
+    @p_sanphams NVARCHAR(MAX) -- JSON array
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @rtn_value INT;
+    DECLARE @id_hd INT;
+    DECLARE @tong_gia DECIMAL(18, 2) = 0;
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        -- Tính tổng tiền từ JSON
+        SELECT @tong_gia = SUM(
+            TRY_CAST(JSON_VALUE(value, '$.dongia') AS DECIMAL(18,2)) * 
+            TRY_CAST(JSON_VALUE(value, '$.soluong') AS INT)
+        )
+        FROM OPENJSON(@p_sanphams);
+        
+        -- Tạo tài khoản khách hàng tạm thời nếu chưa có
+        DECLARE @id_tk INT = NULL;
+        
+        -- Kiểm tra xem đã có tài khoản với SĐT này chưa
+        SELECT @id_tk = id_tk 
+        FROM TAI_KHOAN 
+        WHERE sodienthoai = @p_sodienthoai;
+        
+        -- Nếu chưa có thì tạo tài khoản khách hàng
+        IF @id_tk IS NULL
+        BEGIN
+            INSERT INTO TAI_KHOAN (
+                tendangnhap, 
+                matkhau, 
+                hoveten, 
+                sodienthoai, 
+                email, 
+                vaitro, 
+                trangthai,
+                ngaycapnhat
+            )
+            VALUES (
+                @p_sodienthoai, -- Dùng SĐT làm username
+                'guest123', -- Mật khẩu mặc định cho khách
+                @p_hoveten,
+                @p_sodienthoai,
+                @p_email,
+                0, -- Vai trò khách hàng
+                1, -- Trạng thái active
+                GETDATE()
+            );
+            
+            SET @id_tk = SCOPE_IDENTITY();
+        END
+        
+        -- Tạo hóa đơn
+        INSERT INTO HOA_DON (taikhoan, ngaytao, giahoadon, trangthai, noidung)
+        VALUES (@id_tk, GETDATE(), @tong_gia, @p_trangthai, @p_noidung);
+        
+        SET @id_hd = SCOPE_IDENTITY();
+        
+        -- Thêm chi tiết hóa đơn và cập nhật kho
+        INSERT INTO HD_CHI_TIET (hoadon, sanpham, dongia, soluong)
+        SELECT
+            @id_hd,
+            TRY_CAST(JSON_VALUE(value, '$.sanpham') AS INT),
+            TRY_CAST(JSON_VALUE(value, '$.dongia') AS DECIMAL(18,2)),
+            TRY_CAST(JSON_VALUE(value, '$.soluong') AS INT)
+        FROM OPENJSON(@p_sanphams);
+        
+        -- Cập nhật số lượng trong kho
+        UPDATE ts
+        SET ts.soluong = ts.soluong - hdct.soluong
+        FROM SP_THONG_SO ts
+        INNER JOIN HD_CHI_TIET hdct ON ts.sanpham = hdct.sanpham
+        WHERE hdct.hoadon = @id_hd;
+        
+        -- Tạo bản ghi thanh toán (COD)
+        INSERT INTO THANH_TOAN (
+            hoadon, 
+            phuongthuc, 
+            sotien, 
+            ngaythanhtoan, 
+            magiaodich, 
+            taikhoan
+        )
+        VALUES (
+            @id_hd,
+            'COD', -- Cash on Delivery
+            @tong_gia,
+            NULL, -- Chưa thanh toán
+            'COD_' + CAST(@id_hd AS NVARCHAR(10)),
+            @id_tk
+        );
+        
+        COMMIT TRANSACTION;
+        
+        -- Trả kết quả thành công
+        SET @rtn_value = 0;
+        SELECT 
+            @rtn_value AS rtn_value, 
+            N'Đặt hàng thành công' AS message, 
+            @id_hd AS id_hd,
+            @id_tk AS id_tk;
+            
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+            
+        SET @rtn_value = -1;
+        SELECT 
+            @rtn_value AS rtn_value, 
+            ERROR_MESSAGE() AS message,
+            NULL AS id_hd,
+            NULL AS id_tk;
+    END CATCH
+END;
+GO
+
+-- Lấy chi tiết đơn hàng vừa tạo
+CREATE OR ALTER PROCEDURE WBH_US_SEL_CHI_TIET_DON_HANG
+    @p_id_hd INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    -- Thông tin hóa đơn
+    SELECT
+        hd.id_hd,
+        hd.taikhoan,
+        tk.hoveten,
+        tk.sodienthoai,
+        tk.email,
+        hd.ngaytao,
+        hd.giahoadon,
+        hd.trangthai,
+        hd.noidung
+    FROM HOA_DON hd
+    INNER JOIN TAI_KHOAN tk ON hd.taikhoan = tk.id_tk
+    WHERE hd.id_hd = @p_id_hd;
+    
+    -- Chi tiết sản phẩm
+    SELECT
+        hdct.id_hdct,
+        hdct.sanpham,
+        sp.tensanpham,
+        sp.anhgoc,
+        hdct.dongia,
+        hdct.soluong,
+        (hdct.dongia * hdct.soluong) AS thanhtien
+    FROM HD_CHI_TIET hdct
+    INNER JOIN SAN_PHAM sp ON hdct.sanpham = sp.id_sp
+    WHERE hdct.hoadon = @p_id_hd;
+    
+    -- Thông tin thanh toán
+    SELECT
+        tt.id_tt,
+        tt.phuongthuc,
+        tt.sotien,
+        tt.ngaythanhtoan,
+        tt.magiaodich
+    FROM THANH_TOAN tt
+    WHERE tt.hoadon = @p_id_hd;
+END;
+GO
+
+-- Cập nhật trạng thái đơn hàng
+CREATE OR ALTER PROCEDURE WBH_US_UPD_TRANG_THAI_DON_HANG
+    @p_id_hd INT,
+    @p_trangthai NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    UPDATE HOA_DON
+    SET trangthai = @p_trangthai
+    WHERE id_hd = @p_id_hd;
+    
+    SELECT 
+        0 AS rtn_value,
+        N'Cập nhật trạng thái thành công' AS message,
+        @@ROWCOUNT AS affected_rows;
+END;
+GO
+
+-- Lấy danh sách đơn hàng theo số điện thoại (cho khách hàng tra cứu)
+CREATE OR ALTER PROCEDURE WBH_US_SEL_DON_HANG_THEO_SDT
+    @p_sodienthoai VARCHAR(15)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT
+        hd.id_hd,
+        hd.ngaytao,
+        hd.giahoadon,
+        hd.trangthai,
+        hd.noidung,
+        tk.hoveten,
+        tt.phuongthuc,
+        tt.magiaodich,
+        tt.ngaythanhtoan
+    FROM HOA_DON hd
+    INNER JOIN TAI_KHOAN tk ON hd.taikhoan = tk.id_tk
+    LEFT JOIN THANH_TOAN tt ON hd.id_hd = tt.hoadon
+    WHERE tk.sodienthoai = @p_sodienthoai
+    ORDER BY hd.ngaytao DESC;
+END;
+GO
+
+PRINT N'✅ Đã tạo thành công các stored procedures cho đặt hàng!';
 
 -- ========== ADMIN - QUẢN LÝ NGƯỜI DÙNG ==========
 -- Danh sách người dùng (phân trang + tìm kiếm)
@@ -932,6 +1372,47 @@ BEGIN
         SELECT 0 AS success;
     END CATCH
 END;
+GO
+CREATE PROCEDURE WBH_ODR_ADD_DAT_HANG
+    @p_id_tk INT,
+    @p_noidung NVARCHAR(255),
+    @p_trangthai NVARCHAR(255),
+    @p_sanphams NVARCHAR(MAX) -- JSON array
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        DECLARE @id_hd INT
+        DECLARE @tong_gia DECIMAL(18, 2) = 0
+
+        -- Tính tổng tiền từ JSON
+        SELECT @tong_gia = SUM(TRY_CAST(JSON_VALUE(value, '$.dongia') AS DECIMAL(18,2)) 
+                              * TRY_CAST(JSON_VALUE(value, '$.soluong') AS INT))
+        FROM OPENJSON(@p_sanphams)
+
+        -- Tạo đơn hàng
+        INSERT INTO HOA_DON (taikhoan, ngaytao, giahoadon, trangthai, noidung)
+        VALUES (@p_id_tk, GETDATE(), @tong_gia, @p_trangthai, @p_noidung)
+
+        SET @id_hd = SCOPE_IDENTITY()
+
+        -- Thêm chi tiết
+        INSERT INTO HD_CHI_TIET (hoadon, sanpham, dongia, soluong)
+        SELECT 
+            @id_hd,
+            JSON_VALUE(value, '$.sanpham'),
+            JSON_VALUE(value, '$.dongia'),
+            JSON_VALUE(value, '$.soluong')
+        FROM OPENJSON(@p_sanphams)
+
+        -- Trả kết quả
+        SELECT 0 AS rtn_value, @id_hd AS id_hd
+    END TRY
+    BEGIN CATCH
+        SELECT -1 AS rtn_value, ERROR_MESSAGE() AS message
+    END CATCH
+END
 GO
 
 -- ========== THANH TOÁN & HÓA ĐƠN ==========
@@ -1374,7 +1855,201 @@ BEGIN
         'success' AS status;
 END;
 GO
+-- Cập nhật thông tin thanh toán
+CREATE OR ALTER PROCEDURE WBH_US_UPD_PAYMENT_INFO
+    @p_id_hd INT,
+    @p_phuongthuc NVARCHAR(50),
+    @p_sotien DECIMAL(18, 2),
+    @p_magiaodich NVARCHAR(100),
+    @p_trangthai_thanhtoan NVARCHAR(100) = N'Chưa thanh toán',
+    @p_noidung_ck NVARCHAR(255) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @rtn_value INT;
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        -- Cập nhật thông tin thanh toán
+        UPDATE THANH_TOAN
+        SET 
+            phuongthuc = @p_phuongthuc,
+            sotien = @p_sotien,
+            magiaodich = @p_magiaodich,
+            ngaythanhtoan = CASE 
+                WHEN @p_phuongthuc = 'COD' THEN NULL 
+                ELSE GETDATE() 
+            END,
+            trangthai = @p_trangthai_thanhtoan,
+            noidung = @p_noidung_ck
+        WHERE hoadon = @p_id_hd;
+        
+        -- Cập nhật trạng thái hóa đơn dựa trên phương thức thanh toán
+        DECLARE @trang_thai_hd NVARCHAR(100);
+        
+        IF @p_phuongthuc = 'COD'
+            SET @trang_thai_hd = N'Chờ xác nhận';
+        ELSE IF @p_phuongthuc IN ('BANK', 'QR')
+            SET @trang_thai_hd = N'Chờ thanh toán';
+        ELSE
+            SET @trang_thai_hd = N'Chờ xác nhận';
+            
+        UPDATE HOA_DON
+        SET trangthai = @trang_thai_hd
+        WHERE id_hd = @p_id_hd;
+        
+        COMMIT TRANSACTION;
+        
+        SET @rtn_value = 0;
+        SELECT 
+            @rtn_value AS rtn_value, 
+            N'Cập nhật thông tin thanh toán thành công' AS message,
+            @p_id_hd AS id_hd;
+            
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+            
+        SET @rtn_value = -1;
+        SELECT 
+            @rtn_value AS rtn_value, 
+            ERROR_MESSAGE() AS message,
+            NULL AS id_hd;
+    END CATCH
+END;
+GO
 
+-- Xác nhận thanh toán (cho admin)
+CREATE OR ALTER PROCEDURE WBH_US_CONFIRM_PAYMENT
+    @p_id_hd INT,
+    @p_admin_id INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    DECLARE @rtn_value INT;
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        -- Cập nhật trạng thái thanh toán
+        UPDATE THANH_TOAN
+        SET 
+            ngaythanhtoan = GETDATE(),
+            trangthai = N'Đã thanh toán'
+        WHERE hoadon = @p_id_hd;
+        
+        -- Cập nhật trạng thái hóa đơn
+        UPDATE HOA_DON
+        SET trangthai = N'Đã thanh toán'
+        WHERE id_hd = @p_id_hd;
+        
+        -- Ghi log xác nhận thanh toán
+        INSERT INTO LOG_THANH_TOAN (
+            hoadon, 
+            nguoi_xacnhan, 
+            ngay_xacnhan, 
+            ghi_chu
+        )
+        VALUES (
+            @p_id_hd,
+            @p_admin_id,
+            GETDATE(),
+            N'Xác nhận thanh toán bởi admin'
+        );
+        
+        COMMIT TRANSACTION;
+        
+        SET @rtn_value = 0;
+        SELECT 
+            @rtn_value AS rtn_value, 
+            N'Xác nhận thanh toán thành công' AS message;
+            
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+            
+        SET @rtn_value = -1;
+        SELECT 
+            @rtn_value AS rtn_value, 
+            ERROR_MESSAGE() AS message;
+    END CATCH
+END;
+GO
+
+-- Lấy thống kê thanh toán
+CREATE OR ALTER PROCEDURE WBH_US_SEL_PAYMENT_STATS
+    @p_tu_ngay DATE = NULL,
+    @p_den_ngay DATE = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    -- Nếu không có ngày thì lấy 30 ngày gần nhất
+    IF @p_tu_ngay IS NULL
+        SET @p_tu_ngay = DATEADD(DAY, -30, GETDATE());
+    IF @p_den_ngay IS NULL
+        SET @p_den_ngay = GETDATE();
+    
+    -- Thống kê theo phương thức thanh toán
+    SELECT
+        tt.phuongthuc,
+        COUNT(*) AS so_don_hang,
+        SUM(tt.sotien) AS tong_tien,
+        AVG(tt.sotien) AS tien_trung_binh,
+        COUNT(CASE WHEN tt.trangthai = N'Đã thanh toán' THEN 1 END) AS da_thanh_toan,
+        COUNT(CASE WHEN tt.trangthai = N'Chờ thanh toán' THEN 1 END) AS cho_thanh_toan,
+        COUNT(CASE WHEN tt.trangthai = N'Chưa thanh toán' THEN 1 END) AS chua_thanh_toan
+    FROM THANH_TOAN tt
+    INNER JOIN HOA_DON hd ON tt.hoadon = hd.id_hd
+    WHERE CAST(hd.ngaytao AS DATE) BETWEEN @p_tu_ngay AND @p_den_ngay
+    GROUP BY tt.phuongthuc
+    ORDER BY tong_tien DESC;
+    
+    -- Thống kê theo ngày
+    SELECT
+        CAST(hd.ngaytao AS DATE) AS ngay,
+        COUNT(*) AS so_don_hang,
+        SUM(tt.sotien) AS tong_tien,
+        COUNT(CASE WHEN tt.phuongthuc = 'COD' THEN 1 END) AS cod,
+        COUNT(CASE WHEN tt.phuongthuc = 'BANK' THEN 1 END) AS bank,
+        COUNT(CASE WHEN tt.phuongthuc = 'QR' THEN 1 END) AS qr
+    FROM THANH_TOAN tt
+    INNER JOIN HOA_DON hd ON tt.hoadon = hd.id_hd
+    WHERE CAST(hd.ngaytao AS DATE) BETWEEN @p_tu_ngay AND @p_den_ngay
+    GROUP BY CAST(hd.ngaytao AS DATE)
+    ORDER BY ngay DESC;
+END;
+GO
+
+-- Tạo bảng log thanh toán nếu chưa có
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'LOG_THANH_TOAN')
+BEGIN
+    CREATE TABLE LOG_THANH_TOAN (
+        id_log INT IDENTITY(1,1) PRIMARY KEY,
+        hoadon INT NOT NULL,
+        nguoi_xacnhan INT NULL,
+        ngay_xacnhan DATETIME NOT NULL,
+        ghi_chu NVARCHAR(500) NULL,
+        FOREIGN KEY (hoadon) REFERENCES HOA_DON(id_hd),
+        FOREIGN KEY (nguoi_xacnhan) REFERENCES TAI_KHOAN(id_tk)
+    );
+END;
+GO
+-- Thêm cột trangthai và noidung vào bảng THANH_TOAN nếu chưa có
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('THANH_TOAN') AND name = 'trangthai')
+BEGIN
+    ALTER TABLE THANH_TOAN ADD trangthai NVARCHAR(100) DEFAULT N'Chưa thanh toán';
+END;
+GO
+
+IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id = OBJECT_ID('THANH_TOAN') AND name = 'noidung')
+BEGIN
+    ALTER TABLE THANH_TOAN ADD noidung NVARCHAR(500) NULL;
+END;
+GO
 -- Xử lý MoMo callback
 CREATE PROCEDURE WBH_US_UPD_MOMO_CALLBACK
     @p_orderId NVARCHAR(255),

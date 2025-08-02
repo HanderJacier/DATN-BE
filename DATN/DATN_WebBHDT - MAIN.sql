@@ -312,6 +312,7 @@ BEGIN
 END;
 GO
 /*===== PROC =====*/
+/*-- SAN_PHAM --*/
 -- WBH_AD_CRT_THEMSP
 CREATE PROCEDURE WBH_AD_CRT_THEMSP
     @p_tensanpham NVARCHAR(255),
@@ -367,7 +368,7 @@ BEGIN
     END CATCH
 END;
 GO
--- DATN_CRE_SP_DB00001_1
+-- WBH_US_SEL_DETAIL_SP
 CREATE PROCEDURE WBH_US_SEL_DETAIL_SP
     @p_id_sp INT 
 AS
@@ -382,7 +383,7 @@ BEGIN
         id_sp = @p_id_sp;
 END;
 GO
--- DATN_CRE_SP_DB00001_2
+-- WBH_US_SEL_XEMSP
 CREATE PROCEDURE WBH_US_SEL_XEMSP
 AS
 BEGIN
@@ -394,7 +395,7 @@ BEGIN
         vw_SanPham_ChiTiet
 END;
 GO
--- DATN_CRE_SP_DB00001_3
+-- WBH_US_SEL_NGAYTAOSP
 CREATE PROCEDURE WBH_US_SEL_NGAYTAOSP
 AS
 BEGIN
@@ -405,7 +406,7 @@ BEGIN
     ORDER BY ngaytao DESC;
 END;
 GO
--- DATN_CRE_SP_DB00001_4
+-- WBH_US_SEL_RANKYTSP
 CREATE PROCEDURE WBH_US_SEL_RANKYTSP
 AS
 BEGIN
@@ -425,7 +426,7 @@ BEGIN
         YT.SoYeuThich DESC;
 END;
 GO
--- DATN_CRE_SP_DB00001_5 
+-- WBH_US_SEL_SALESP
 CREATE PROCEDURE WBH_US_SEL_SALESP
 AS
 BEGIN
@@ -436,7 +437,7 @@ BEGIN
     WHERE hangiamgia >= GETDATE();
 END;
 GO
--- DATN_CRE_SP_DB00001_6
+-- WBH_AD_UPD_SUASP
 CREATE PROCEDURE WBH_AD_UPD_SUASP
     @p_id_sp INT,
     @p_tensanpham NVARCHAR(255),
@@ -521,7 +522,23 @@ BEGIN
     END CATCH
 END;
 GO
--- DATN_CRE_GY_DB00002_0
+--END SAN_PHAM
+
+/*-- GIAM_GIA --*/
+-- WBH_AD_SEL_getGIAMGIA
+CREATE PROCEDURE WBH_AD_SEL_getGIAMGIA
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT * 
+    FROM GIAM_GIA
+END;
+GO
+--END GIAM_GIA
+
+/*-- GOP_Y --*/
+-- WBH_US_CRT_GY
 CREATE PROCEDURE WBH_US_CRT_GY
     @id_tk INT,
     @noidung NVARCHAR(255)
@@ -535,7 +552,7 @@ BEGIN
     SELECT 1
 END;
 GO
--- DATN_CRE_GY_DB00002_1
+-- WBH_AD_SEL_GY_PHAN_TRANG
 CREATE PROCEDURE WBH_AD_SEL_GY_PHAN_TRANG
     @p_pageNo INT,
     @p_pageSize INT
@@ -553,7 +570,10 @@ BEGIN
     FETCH NEXT @p_pageSize ROWS ONLY;
 END;
 GO
--- DATN_CRE_GY_DB00003_0
+--END GOP_Y
+
+/*-- YEU_THICH --*/
+-- WBH_US_UPD_CAPNHAT_YT_SP
 CREATE PROCEDURE WBH_US_UPD_CAPNHAT_YT_SP
     @sanpham INT,
     @taikhoan INT
@@ -578,6 +598,9 @@ BEGIN
     END
 END;
 GO
+--END TAI_KHOAN
+
+/*-- TAI_KHOAN --*/
 -- WBH_AD_SEL_getTAIKHOAN
 CREATE PROCEDURE WBH_AD_SEL_getTAIKHOAN
 AS
@@ -587,16 +610,6 @@ BEGIN
     SELECT * 
     FROM TAI_KHOAN
     ORDER BY ngaytao DESC;
-END;
-GO
--- WBH_AD_SEL_getGIAMGIA
-CREATE PROCEDURE WBH_AD_SEL_getGIAMGIA
-AS
-BEGIN
-    SET NOCOUNT ON;
-
-    SELECT * 
-    FROM GIAM_GIA
 END;
 GO
 -- WBH_US_SEL_LOGIN_USER
@@ -776,7 +789,6 @@ BEGIN
     SELECT @rtn_value AS rtn_value;
 END;
 GO
-
 -- WBH_US_UPD_DOI_MAT_KHAU
 CREATE PROCEDURE WBH_US_UPD_DOI_MAT_KHAU
     @p_id_tk INT,
@@ -871,6 +883,9 @@ BEGIN
     SELECT @@ROWCOUNT AS affected_rows;
 END;
 GO
+--END TAI_KHOAN
+
+/*-- HOA_DON --*/
 -- WBH_US_CRT_HOA_DON
 CREATE PROCEDURE WBH_US_CRT_HOA_DON
     @p_taikhoan INT,
@@ -886,7 +901,6 @@ BEGIN
     SELECT SCOPE_IDENTITY() AS id_hd;
 END;
 GO
-
 -- WBH_US_CRT_HOA_DON_CHI_TIET
 CREATE PROCEDURE WBH_US_CRT_HOA_DON_CHI_TIET
     @p_hoadon INT,
@@ -908,7 +922,6 @@ BEGIN
     SELECT SCOPE_IDENTITY() AS id_hdct;
 END;
 GO
-
 -- WBH_US_CRT_THANH_TOAN
 CREATE PROCEDURE WBH_US_CRT_THANH_TOAN
     @p_hoadon INT,
@@ -931,7 +944,6 @@ BEGIN
     SELECT SCOPE_IDENTITY() AS id_tt;
 END;
 GO
-
 -- WBH_US_UPD_TRANG_THAI_THANH_TOAN
 CREATE PROCEDURE WBH_US_UPD_TRANG_THAI_THANH_TOAN
     @p_magiaodich NVARCHAR(255),
@@ -962,7 +974,6 @@ BEGIN
     END
 END;
 GO
-
 -- WBH_US_SEL_LICH_SU_DON_HANG
 CREATE PROCEDURE WBH_US_SEL_LICH_SU_DON_HANG
     @p_taikhoan INT,
@@ -989,7 +1000,6 @@ BEGIN
     FETCH NEXT @p_pageSize ROWS ONLY;
 END;
 GO
-
 -- WBH_US_SEL_CHI_TIET_HOA_DON
 CREATE PROCEDURE WBH_US_SEL_CHI_TIET_HOA_DON
     @p_id_hd INT
@@ -1064,8 +1074,7 @@ BEGIN
     FETCH NEXT @p_pageSize ROWS ONLY;
 END;
 GO
-
--- Chi tiết hóa đơn cho admin
+-- WBH_AD_SEL_CHI_TIET_HOA_DON
 CREATE PROCEDURE WBH_AD_SEL_CHI_TIET_HOA_DON
     @p_id_hd INT
 AS
@@ -1076,8 +1085,7 @@ BEGIN
     EXEC WBH_US_SEL_CHI_TIET_HOA_DON @p_id_hd;
 END;
 GO
-
--- Cập nhật trạng thái hóa đơn
+-- WBH_AD_UPD_TRANG_THAI_HOA_DON
 CREATE PROCEDURE WBH_AD_UPD_TRANG_THAI_HOA_DON
     @p_id_hd INT,
     @p_trangthai NVARCHAR(255)
@@ -1092,7 +1100,6 @@ BEGIN
     SELECT @@ROWCOUNT AS affected_rows;
 END;
 GO
-
 -- WBH_AD_SEL_TIM_KIEM_HOA_DON
 CREATE PROCEDURE WBH_AD_SEL_TIM_KIEM_HOA_DON
     @p_keyword NVARCHAR(255) = NULL,
@@ -1128,7 +1135,6 @@ BEGIN
     FETCH NEXT @p_pageSize ROWS ONLY;
 END;
 GO
-
 -- WBH_AD_SEL_THONG_KE_HOA_DON
 CREATE PROCEDURE WBH_AD_SEL_THONG_KE_HOA_DON
 AS
@@ -1153,120 +1159,6 @@ BEGIN
     WHERE ngaytao >= DATEADD(MONTH, -12, GETDATE())
     GROUP BY YEAR(ngaytao), MONTH(ngaytao)
     ORDER BY nam DESC, thang DESC;
-END;
-GO
-
--- WBH_AD_SEL_BAO_CAO_DOANH_THU
-CREATE PROCEDURE WBH_AD_SEL_BAO_CAO_DOANH_THU
-    @p_tu_ngay DATE,
-    @p_den_ngay DATE
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    SELECT 
-        CONVERT(DATE, hd.ngaytao) AS ngay,
-        COUNT(*) AS so_don_hang,
-        SUM(hd.giahoadon) AS tong_doanh_thu,
-        AVG(hd.giahoadon) AS don_hang_trung_binh
-    FROM HOA_DON hd
-    WHERE hd.trangthai = N'Đã thanh toán'
-      AND hd.ngaytao >= @p_tu_ngay
-      AND hd.ngaytao <= @p_den_ngay
-    GROUP BY CONVERT(DATE, hd.ngaytao)
-    ORDER BY ngay DESC;
-END;
-GO
--- WBH_US_CRT_DANH_GIA
-CREATE PROCEDURE WBH_US_CRT_DANH_GIA
-    @p_taikhoan INT,
-    @p_sanpham INT,
-    @p_noidung NVARCHAR(255),
-    @p_diemso INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    -- Kiểm tra đã đánh giá chưa
-    IF EXISTS (SELECT 1 FROM DANH_GIA WHERE taikhoan = @p_taikhoan AND sanpham = @p_sanpham)
-    BEGIN
-        -- Cập nhật đánh giá cũ
-        UPDATE DANH_GIA
-        SET noidung = @p_noidung,
-            diemso = @p_diemso,
-            ngaytao = GETDATE()
-        WHERE taikhoan = @p_taikhoan AND sanpham = @p_sanpham;
-        
-        SELECT 1 AS success, 'updated' AS action;
-    END
-    ELSE
-    BEGIN
-        -- Tạo đánh giá mới
-        INSERT INTO DANH_GIA (taikhoan, sanpham, noidung, diemso)
-        VALUES (@p_taikhoan, @p_sanpham, @p_noidung, @p_diemso);
-        
-        SELECT 1 AS success, 'created' AS action;
-    END
-END;
-GO
-
--- WBH_US_SEL_DANH_GIA_THEO_SP
-CREATE PROCEDURE WBH_US_SEL_DANH_GIA_THEO_SP
-    @p_sanpham INT,
-    @p_pageNo INT = 1,
-    @p_pageSize INT = 10
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    SELECT 
-        dg.id_dg,
-        dg.taikhoan,
-        tk.hoveten,
-        dg.noidung,
-        dg.diemso,
-        dg.ngaytao
-    FROM DANH_GIA dg
-    JOIN TAI_KHOAN tk ON dg.taikhoan = tk.id_tk
-    WHERE dg.sanpham = @p_sanpham
-    ORDER BY dg.ngaytao DESC
-    OFFSET (@p_pageNo - 1) * @p_pageSize ROWS
-    FETCH NEXT @p_pageSize ROWS ONLY;
-END;
-GO
-
--- Xóa đánh giá
-CREATE PROCEDURE WBH_US_DEL_DANH_GIA
-    @p_id_dg INT,
-    @p_taikhoan INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    DELETE FROM DANH_GIA
-    WHERE id_dg = @p_id_dg AND taikhoan = @p_taikhoan;
-    
-    SELECT @@ROWCOUNT AS affected_rows;
-END;
-GO
-
--- WBH_US_SEL_THONG_KE_DANH_GIA
-CREATE PROCEDURE WBH_US_SEL_THONG_KE_DANH_GIA
-    @p_sanpham INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    
-    SELECT 
-        COUNT(*) AS tong_danh_gia,
-        AVG(CAST(diemso AS FLOAT)) AS diem_trung_binh,
-        SUM(CASE WHEN diemso = 5 THEN 1 ELSE 0 END) AS sao_5,
-        SUM(CASE WHEN diemso = 4 THEN 1 ELSE 0 END) AS sao_4,
-        SUM(CASE WHEN diemso = 3 THEN 1 ELSE 0 END) AS sao_3,
-        SUM(CASE WHEN diemso = 2 THEN 1 ELSE 0 END) AS sao_2,
-        SUM(CASE WHEN diemso = 1 THEN 1 ELSE 0 END) AS sao_1
-    FROM DANH_GIA
-    WHERE sanpham = @p_sanpham;
 END;
 GO
 -- WBH_US_CRT_MOMO_PAYMENT
@@ -1298,7 +1190,6 @@ BEGIN
         'success' AS status;
 END;
 GO
-
 -- WBH_US_UPD_MOMO_CALLBACK
 CREATE PROCEDURE WBH_US_UPD_MOMO_CALLBACK
     @p_orderId NVARCHAR(255),
@@ -1350,7 +1241,6 @@ BEGIN
         'processed' AS status;
 END;
 GO
-
 -- WBH_US_SEL_MOMO_STATUS
 CREATE PROCEDURE WBH_US_SEL_MOMO_STATUS
     @p_orderId NVARCHAR(255)
@@ -1373,6 +1263,123 @@ BEGIN
     WHERE tt.magiaodich = @p_orderId;
 END;
 GO
+--END HOA_DON
+
+/*-- THONG_KE --*/
+-- WBH_AD_SEL_BAO_CAO_DOANH_THU
+CREATE PROCEDURE WBH_AD_SEL_BAO_CAO_DOANH_THU
+    @p_tu_ngay DATE,
+    @p_den_ngay DATE
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT 
+        CONVERT(DATE, hd.ngaytao) AS ngay,
+        COUNT(*) AS so_don_hang,
+        SUM(hd.giahoadon) AS tong_doanh_thu,
+        AVG(hd.giahoadon) AS don_hang_trung_binh
+    FROM HOA_DON hd
+    WHERE hd.trangthai = N'Đã thanh toán'
+      AND hd.ngaytao >= @p_tu_ngay
+      AND hd.ngaytao <= @p_den_ngay
+    GROUP BY CONVERT(DATE, hd.ngaytao)
+    ORDER BY ngay DESC;
+END;
+GO
+-- WBH_US_SEL_THONG_KE_DANH_GIA
+CREATE PROCEDURE WBH_US_SEL_THONG_KE_DANH_GIA
+    @p_sanpham INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT 
+        COUNT(*) AS tong_danh_gia,
+        AVG(CAST(diemso AS FLOAT)) AS diem_trung_binh,
+        SUM(CASE WHEN diemso = 5 THEN 1 ELSE 0 END) AS sao_5,
+        SUM(CASE WHEN diemso = 4 THEN 1 ELSE 0 END) AS sao_4,
+        SUM(CASE WHEN diemso = 3 THEN 1 ELSE 0 END) AS sao_3,
+        SUM(CASE WHEN diemso = 2 THEN 1 ELSE 0 END) AS sao_2,
+        SUM(CASE WHEN diemso = 1 THEN 1 ELSE 0 END) AS sao_1
+    FROM DANH_GIA
+    WHERE sanpham = @p_sanpham;
+END;
+GO
+--END THONG_KE
+
+/*-- DANH_GIA --*/
+-- WBH_US_CRT_DANH_GIA
+CREATE PROCEDURE WBH_US_CRT_DANH_GIA
+    @p_taikhoan INT,
+    @p_sanpham INT,
+    @p_noidung NVARCHAR(255),
+    @p_diemso INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    -- Kiểm tra đã đánh giá chưa
+    IF EXISTS (SELECT 1 FROM DANH_GIA WHERE taikhoan = @p_taikhoan AND sanpham = @p_sanpham)
+    BEGIN
+        -- Cập nhật đánh giá cũ
+        UPDATE DANH_GIA
+        SET noidung = @p_noidung,
+            diemso = @p_diemso,
+            ngaytao = GETDATE()
+        WHERE taikhoan = @p_taikhoan AND sanpham = @p_sanpham;
+        
+        SELECT 1 AS success, 'updated' AS action;
+    END
+    ELSE
+    BEGIN
+        -- Tạo đánh giá mới
+        INSERT INTO DANH_GIA (taikhoan, sanpham, noidung, diemso)
+        VALUES (@p_taikhoan, @p_sanpham, @p_noidung, @p_diemso);
+        
+        SELECT 1 AS success, 'created' AS action;
+    END
+END;
+GO
+-- WBH_US_SEL_DANH_GIA_THEO_SP
+CREATE PROCEDURE WBH_US_SEL_DANH_GIA_THEO_SP
+    @p_sanpham INT,
+    @p_pageNo INT = 1,
+    @p_pageSize INT = 10
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    SELECT 
+        dg.id_dg,
+        dg.taikhoan,
+        tk.hoveten,
+        dg.noidung,
+        dg.diemso,
+        dg.ngaytao
+    FROM DANH_GIA dg
+    JOIN TAI_KHOAN tk ON dg.taikhoan = tk.id_tk
+    WHERE dg.sanpham = @p_sanpham
+    ORDER BY dg.ngaytao DESC
+    OFFSET (@p_pageNo - 1) * @p_pageSize ROWS
+    FETCH NEXT @p_pageSize ROWS ONLY;
+END;
+GO
+-- WBH_US_DEL_DANH_GIA
+CREATE PROCEDURE WBH_US_DEL_DANH_GIA
+    @p_id_dg INT,
+    @p_taikhoan INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DELETE FROM DANH_GIA
+    WHERE id_dg = @p_id_dg AND taikhoan = @p_taikhoan;
+    
+    SELECT @@ROWCOUNT AS affected_rows;
+END;
+GO
+
 /*===== CHECK TRIGGER =====*/
 SELECT
     t.name AS TriggerName, 
@@ -1393,7 +1400,7 @@ GO
 /*===== CHECK PROCEDURE =====*/
 SELECT name 
 FROM sys.procedures
-ORDER BY name;
+ORDER BY create_date;
 GO
 
 /*===== INSERT DATA =====*/

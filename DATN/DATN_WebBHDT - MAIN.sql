@@ -73,7 +73,7 @@ CREATE TABLE TAI_KHOAN(
 	sodienthoai VARCHAR(15)  UNIQUE,
 	email NVARCHAR(255)  UNIQUE,
 	trangthai BIT DEFAULT 0 , -- 1 = ACTIVE / 0 = INACTIVE
-	ngaytao DATE  DEFAULT GETDATE(),
+	ngaytao NVARCHAR(255)  DEFAULT GETDATE(),
 	ngaycapnhat DATE 
 );
 GO
@@ -87,16 +87,16 @@ GO
 -- SAN_PHAM
 CREATE TABLE SAN_PHAM(
 	id_sp INT IDENTITY(1,1)  PRIMARY KEY,
-	tensanpham NVARCHAR(255) ,
-	dongia DECIMAL(18, 0) DEFAULT 0 CHECK(dongia >= 0),
-	loai INT ,
-	thuonghieu INT ,
-	anhgoc NVARCHAR(255) ,
-	ngaytao DATE DEFAULT GETDATE() ,
-    --Giảm giá
-	loaigiam INT ,
-	giamgia DECIMAL(18) DEFAULT 0 CHECK(giamgia >= 0),
-	hangiamgia DATE
+	tensanpham NVARCHAR(255),
+	dongia DECIMAL(18) DEFAULT 0 CHECK (dongia >= 0),
+	loai INT,
+	thuonghieu INT,
+	anhgoc NVARCHAR(255),
+	ngaytao NVARCHAR(255) DEFAULT GETDATE(),
+    -- Giảm giá
+	loaigiam INT,
+	giamgia DECIMAL(18) DEFAULT 0 CHECK (giamgia >= 0),
+	hangiamgia NVARCHAR(255)
 ); 
 GO
 -- GIAM_GIA
@@ -120,23 +120,13 @@ GO
 -- SP_THONG_SO
 CREATE TABLE SP_THONG_SO(
 	id_ts INT IDENTITY(1,1)  PRIMARY KEY,
-	sanpham INT ,
-	cpuBrand NVARCHAR(255) ,
-	cpuModel NVARCHAR(255) ,
-	cpuType NVARCHAR(255) ,
-	cpuMinSpeed NVARCHAR(255) ,
-	cpuMaxSpeed NVARCHAR(255) ,
-	cpuCores NVARCHAR(255) ,
-	cpuThreads NVARCHAR(255) ,
-	cpuCache NVARCHAR(255) ,
-	gpuBrand NVARCHAR(255) ,
-	gpuModel NVARCHAR(255) ,
-	gpuFullName NVARCHAR(255) ,
-	gpuMemory NVARCHAR(255) ,
-	ram NVARCHAR(255) ,
-	rom NVARCHAR(255) ,
-	screen NVARCHAR(255) ,
-	mausac NVARCHAR(255) ,
+	sanpham INT,
+    model NVARCHAR(255),
+    trongluong NVARCHAR(255),
+    pin NVARCHAR(255),
+    congketnoi NVARCHAR(255),
+    tinhnang NVARCHAR(255),
+	mausac NVARCHAR(255),
 	soluong INT DEFAULT 0 CHECK (soluong>= 0) ,
 );
 GO
@@ -151,7 +141,7 @@ GO
 CREATE TABLE HOA_DON(
 	id_hd INT IDENTITY(1,1)  PRIMARY KEY,
 	taikhoan INT ,
-	ngaytao DATE DEFAULT GETDATE() ,
+	ngaytao NVARCHAR(255) DEFAULT GETDATE() ,
 	giahoadon DECIMAL(18) DEFAULT 0 CHECK(giahoadon >= 0),
 	trangthai NVARCHAR(255) ,
 	noidung NVARCHAR(255) ,
@@ -175,7 +165,7 @@ CREATE TABLE THANH_TOAN(
 	ngaythanhtoan DATE ,
 	magiaodich NVARCHAR(255) ,
 	taikhoan INT ,
-	ngaytao DATE DEFAULT GETDATE() ,
+	ngaytao NVARCHAR(255) DEFAULT GETDATE() ,
 );
 GO
 -- GIO_HANG
@@ -190,8 +180,8 @@ CREATE TABLE GOP_Y(
 	id_gy INT IDENTITY(1,1)  PRIMARY KEY,
 	taikhoan INT ,
 	noidung NVARCHAR(255) ,
-	ngaytao DATE DEFAULT GETDATE(),
-    ngaycapnhat DATE
+	ngaytao NVARCHAR(255) DEFAULT GETDATE(),
+    ngaycapnhat NVARCHAR(255)
 );
 GO
 -- DANH_GIA
@@ -201,7 +191,7 @@ CREATE TABLE DANH_GIA(
 	sanpham INT ,
 	noidung NVARCHAR(255) ,
 	diemso INT DEFAULT 0 CHECK (diemso>=0 AND diemso<=5) ,
-	ngaytao DATE DEFAULT GETDATE()
+	ngaytao NVARCHAR(255) DEFAULT GETDATE()
 );
 GO
 -- YEU_THICH
@@ -237,21 +227,13 @@ SELECT
 
     -- Thông số kỹ thuật
     TS.id_ts,
-    TS.cpuBrand,
-    TS.cpuModel,
-    TS.cpuType,
-    TS.cpuMinSpeed,
-    TS.cpuMaxSpeed,
-    TS.cpuCores,
-    TS.cpuThreads,
-    TS.cpuCache,
-    TS.gpuBrand,
-    TS.gpuModel,
-    TS.gpuFullName,
-    TS.gpuMemory,
-    TS.ram,
-    TS.rom,
-    TS.screen,
+    
+    TS.model,
+    TS.trongluong,
+    TS.pin,
+    TS.congketnoi,
+    TS.tinhnang,
+    
     TS.mausac,
     TS.soluong,
 
@@ -316,30 +298,20 @@ GO
 -- WBH_AD_CRT_THEMSP
 CREATE PROCEDURE WBH_AD_CRT_THEMSP
     @p_tensanpham NVARCHAR(255),
-    @p_dongia BIGINT,
+    @p_dongia DECIMAL(18),
     @p_loai INT,
     @p_thuonghieu INT,
     @p_anhgoc NVARCHAR(255),
-    @p_cpuBrand NVARCHAR(255),
-    @p_cpuModel NVARCHAR(255),
-    @p_cpuType NVARCHAR(255),
-    @p_cpuMinSpeed NVARCHAR(255),
-    @p_cpuMaxSpeed NVARCHAR(255),
-    @p_cpuCores NVARCHAR(255),
-    @p_cpuThreads NVARCHAR(255),
-    @p_cpuCache NVARCHAR(255),
-    @p_gpuBrand NVARCHAR(255),
-    @p_gpuModel NVARCHAR(255),
-    @p_gpuFullName NVARCHAR(255),
-    @p_gpuMemory NVARCHAR(255),
-    @p_ram NVARCHAR(255),
-    @p_rom NVARCHAR(255),
-    @p_screen NVARCHAR(255),
+    @p_model NVARCHAR(255),
+    @p_trongluong NVARCHAR(255),
+    @p_pin NVARCHAR(255),
+    @p_congketnoi NVARCHAR(255),
+    @p_tinhnang NVARCHAR(255),
     @p_mausac NVARCHAR(255),
     @p_soluong INT,
     @p_anhphu NVARCHAR(255),
     @p_id_gg INT,
-    @p_hangiamgia DATE
+    @p_hangiamgia NVARCHAR(255)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -349,12 +321,10 @@ BEGIN
         VALUES (@p_tensanpham, @p_dongia, @p_loai, @p_thuonghieu, @p_anhgoc, @p_id_gg, @p_hangiamgia);
         DECLARE @NewProductID INT = SCOPE_IDENTITY();
         INSERT INTO SP_THONG_SO (
-            sanpham, cpuBrand, cpuModel, cpuType, cpuMinSpeed, cpuMaxSpeed, cpuCores, cpuThreads, cpuCache,
-            gpuBrand, gpuModel, gpuFullName, gpuMemory, ram, rom, screen, mausac, soluong
+            sanpham, model, trongluong, pin, congketnoi, tinhnang, mausac, soluong
         )
         VALUES (
-            @NewProductID, @p_cpuBrand, @p_cpuModel, @p_cpuType, @p_cpuMinSpeed, @p_cpuMaxSpeed, @p_cpuCores, @p_cpuThreads, @p_cpuCache,
-            @p_gpuBrand, @p_gpuModel, @p_gpuFullName, @p_gpuMemory, @p_ram, @p_rom, @p_screen, @p_mausac, @p_soluong
+            @NewProductID, @p_model, @p_trongluong, @p_pin, @p_congketnoi, @p_tinhnang,@p_mausac, @p_soluong
         );
         INSERT INTO ANH_SP (sanpham, diachianh)
         VALUES (@NewProductID, @p_anhphu);
@@ -441,30 +411,20 @@ GO
 CREATE PROCEDURE WBH_AD_UPD_SUASP
     @p_id_sp INT,
     @p_tensanpham NVARCHAR(255),
-    @p_dongia BIGINT,
+    @p_dongia DECIMAL(18),
     @p_loai INT,
     @p_thuonghieu INT,
     @p_anhgoc NVARCHAR(255),
-    @p_cpuBrand NVARCHAR(255),
-    @p_cpuModel NVARCHAR(255),
-    @p_cpuType NVARCHAR(255),
-    @p_cpuMinSpeed NVARCHAR(255),
-    @p_cpuMaxSpeed NVARCHAR(255),
-    @p_cpuCores NVARCHAR(255),
-    @p_cpuThreads NVARCHAR(255),
-    @p_cpuCache NVARCHAR(255),
-    @p_gpuBrand NVARCHAR(255),
-    @p_gpuModel NVARCHAR(255),
-    @p_gpuFullName NVARCHAR(255),
-    @p_gpuMemory NVARCHAR(255),
-    @p_ram NVARCHAR(255),
-    @p_rom NVARCHAR(255),
-    @p_screen NVARCHAR(255),
+    @p_model NVARCHAR(255),
+    @p_trongluong NVARCHAR(255),
+    @p_pin NVARCHAR(255),
+    @p_congketnoi NVARCHAR(255),
+    @p_tinhnang NVARCHAR(255),
     @p_mausac NVARCHAR(255),
     @p_soluong INT,
     @p_anhphu NVARCHAR(255),
     @p_id_gg INT,
-    @p_hangiamgia DATE
+    @p_hangiamgia NVARCHAR(255)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -484,21 +444,11 @@ BEGIN
 
         -- Cập nhật bảng SP_THONG_SO
         UPDATE SP_THONG_SO
-        SET cpuBrand = @p_cpuBrand,
-            cpuModel = @p_cpuModel,
-            cpuType = @p_cpuType,
-            cpuMinSpeed = @p_cpuMinSpeed,
-            cpuMaxSpeed = @p_cpuMaxSpeed,
-            cpuCores = @p_cpuCores,
-            cpuThreads = @p_cpuThreads,
-            cpuCache = @p_cpuCache,
-            gpuBrand = @p_gpuBrand,
-            gpuModel = @p_gpuModel,
-            gpuFullName = @p_gpuFullName,
-            gpuMemory = @p_gpuMemory,
-            ram = @p_ram,
-            rom = @p_rom,
-            screen = @p_screen,
+        SET model = @p_model,
+            trongluong = @p_trongluong,
+            pin = @p_pin,
+            congketnoi = @p_congketnoi,
+            tinhnang = @p_tinhnang,
             mausac = @p_mausac,
             soluong = @p_soluong
         WHERE sanpham = @p_id_sp;
@@ -520,6 +470,28 @@ BEGIN
             ERROR_MESSAGE() AS error_message,
             ERROR_LINE() AS error_line;
     END CATCH
+END;
+GO
+-- WBH_US_SEL_SANPHAM_BY_SANPHAM_DETAIL
+CREATE PROCEDURE WBH_US_SEL_SANPHAM_BY_SANPHAM_DETAIL
+    @p_id_sp INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @v_thuonghieu NVARCHAR(100),
+            @v_loai NVARCHAR(100);
+
+    SELECT 
+        @v_thuonghieu = thuonghieu,
+        @v_loai = loai
+    FROM SAN_PHAM
+    WHERE id_sp = @p_id_sp;
+
+    SELECT *
+    FROM vw_SanPham_ChiTiet
+    WHERE thuonghieu = @v_thuonghieu
+      AND loai = @v_loai;
 END;
 GO
 --END SAN_PHAM
@@ -1103,8 +1075,8 @@ GO
 -- WBH_AD_SEL_TIM_KIEM_HOA_DON
 CREATE PROCEDURE WBH_AD_SEL_TIM_KIEM_HOA_DON
     @p_keyword NVARCHAR(255) = NULL,
-    @p_tu_ngay DATE = NULL,
-    @p_den_ngay DATE = NULL,
+    @p_tu_ngay NVARCHAR(255) = NULL,
+    @p_den_ngay NVARCHAR(255) = NULL,
     @p_pageNo INT = 1,
     @p_pageSize INT = 10
 AS
@@ -1268,8 +1240,8 @@ GO
 /*-- THONG_KE --*/
 -- WBH_AD_SEL_BAO_CAO_DOANH_THU
 CREATE PROCEDURE WBH_AD_SEL_BAO_CAO_DOANH_THU
-    @p_tu_ngay DATE,
-    @p_den_ngay DATE
+    @p_tu_ngay NVARCHAR(255),
+    @p_den_ngay NVARCHAR(255)
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -1428,42 +1400,24 @@ INSERT INTO SP_LOAI (loaiTen) VALUES
 (N'Điện thoại di động'),
 (N'Máy tính bảng'),
 (N'Laptop'),
-(N'Máy tính để bàn'),
-(N'Thiết bị đeo thông minh'),
-(N'Phụ kiện điện thoại'),
-(N'Phụ kiện máy tính'),
-(N'Thiết bị mạng'),
-(N'Thiết bị lưu trữ'),
+(N'Phụ kiện'),
 (N'Tivi'),
 (N'Loa và tai nghe'),
-(N'Đồng hồ thông minh'),
-(N'Máy ảnh và máy quay'),
-(N'Máy in và mực in'),
-(N'Đồ gia dụng thông minh');
+(N'Đồng hồ thông minh');
 GO
 
 -- SP_THUONG_HIEU
 INSERT INTO SP_THUONG_HIEU (thuonghieuTen) VALUES 
-(N'Apple'),
-(N'Samsung'),
-(N'Xiaomi'),
-(N'Oppo'),
-(N'Vivo'),
-(N'Realme'),
-(N'Nokia'),
-(N'ASUS'),
-(N'Dell'),
+(N'LENOVO'),
 (N'HP'),
-(N'Lenovo'),
-(N'Acer'),
-(N'Sony'),
-(N'LG'),
-(N'Panasonic'),
-(N'Canon'),
-(N'Epson'),
-(N'JBL'),
-(N'Anker'),
-(N'Huawei');
+(N'DELL'),
+(N'APPLE'),
+(N'ASUS'),
+(N'SAMSUNG'),
+(N'XIAOMI'),
+(N'VIVO'),
+(N'OPPPO'),
+(N'SONY');
 GO
 
 -- TAI_KHOAN
@@ -1479,23 +1433,4 @@ VALUES
 (N'user8', N'123456', 0, N'Đặng Thị H', '0900000008', N'user8@example.com', 1),
 (N'user9', N'123456', 0, N'Bùi Văn I', '0900000009', N'user9@example.com', 1),
 (N'user10', N'123456', 0, N'Vũ Thị J', '0900000010', N'user10@example.com', 1);
-GO
-
--- SAN_PHAM
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
-EXEC WBH_AD_CRT_THEMSP @p_tensanpham = N'iPhone 14 Pro', @p_dongia = 25990000, @p_loai = 1, @p_thuonghieu = 1, @p_anhgoc = N'default.png', @p_cpuBrand = N'Apple', @p_cpuModel = N'A16 Bionic', @p_cpuType = N'High-end', @p_cpuMinSpeed = N'3.46 GHz', @p_cpuMaxSpeed = N'3.46 GHz', @p_cpuCores = N'6', @p_cpuThreads = N'6', @p_cpuCache = N'16MB', @p_gpuBrand = N'Apple', @p_gpuModel = N'Apple GPU', @p_gpuFullName = N'Apple GPU 5-core', @p_gpuMemory = N'6GB', @p_ram = N'6GB', @p_rom = N'128GB', @p_screen = N'6.1"', @p_mausac = N'Tím', @p_soluong = 10, @p_anhphu = N'detail_iphone14.png', @p_id_gg = 1, @p_hangiamgia = "2025/08/30";
 GO

@@ -73,7 +73,7 @@ CREATE TABLE TAI_KHOAN(
 	sodienthoai VARCHAR(15)  UNIQUE,
 	email NVARCHAR(255)  UNIQUE,
 	trangthai BIT DEFAULT 0 , -- 1 = ACTIVE / 0 = INACTIVE
-	ngaytao NVARCHAR(255)  DEFAULT GETDATE(),
+	ngaytao NVARCHAR(255) DEFAULT FORMAT(GETDATE(), 'dd/MM/yyyy'),
 	ngaycapnhat DATE 
 );
 GO
@@ -92,7 +92,7 @@ CREATE TABLE SAN_PHAM(
 	loai INT,
 	thuonghieu INT,
 	anhgoc NVARCHAR(255),
-	ngaytao NVARCHAR(255) DEFAULT GETDATE(),
+	ngaytao NVARCHAR(255) DEFAULT FORMAT(GETDATE(), 'dd/MM/yyyy'),
     -- Giảm giá
 	loaigiam INT,
 	giamgia DECIMAL(18) DEFAULT 0 CHECK (giamgia >= 0),
@@ -141,7 +141,7 @@ GO
 CREATE TABLE HOA_DON(
 	id_hd INT IDENTITY(1,1)  PRIMARY KEY,
 	taikhoan INT ,
-	ngaytao NVARCHAR(255) DEFAULT GETDATE() ,
+	ngaytao NVARCHAR(255) DEFAULT FORMAT(GETDATE(), 'dd/MM/yyyy'),
 	giahoadon DECIMAL(18) DEFAULT 0 CHECK(giahoadon >= 0),
 	trangthai NVARCHAR(255) ,
 	noidung NVARCHAR(255) ,
@@ -162,10 +162,10 @@ CREATE TABLE THANH_TOAN(
 	hoadon INT ,
 	phuongthuc NVARCHAR(255) ,
 	sotien DECIMAL(18) DEFAULT 0 CHECK(sotien >= 0) ,
-	ngaythanhtoan DATE ,
+	ngaythanhtoan NVARCHAR(255) DEFAULT FORMAT(GETDATE(), 'dd/MM/yyyy'),
 	magiaodich NVARCHAR(255) ,
 	taikhoan INT ,
-	ngaytao NVARCHAR(255) DEFAULT GETDATE() ,
+	ngaytao NVARCHAR(255) DEFAULT FORMAT(GETDATE(), 'dd/MM/yyyy')
 );
 GO
 -- GIO_HANG
@@ -180,7 +180,7 @@ CREATE TABLE GOP_Y(
 	id_gy INT IDENTITY(1,1)  PRIMARY KEY,
 	taikhoan INT ,
 	noidung NVARCHAR(255) ,
-	ngaytao NVARCHAR(255) DEFAULT GETDATE(),
+	ngaytao NVARCHAR(255) DEFAULT FORMAT(GETDATE(), 'dd/MM/yyyy'),
     ngaycapnhat NVARCHAR(255)
 );
 GO
@@ -191,7 +191,7 @@ CREATE TABLE DANH_GIA(
 	sanpham INT ,
 	noidung NVARCHAR(255) ,
 	diemso INT DEFAULT 0 CHECK (diemso>=0 AND diemso<=5) ,
-	ngaytao NVARCHAR(255) DEFAULT GETDATE()
+	ngaytao NVARCHAR(255) DEFAULT FORMAT(GETDATE(), 'dd/MM/yyyy')
 );
 GO
 -- YEU_THICH
@@ -273,7 +273,7 @@ BEGIN
     SET NOCOUNT ON
 
     UPDATE TAI_KHOAN
-    SET ngaycapnhat = GETDATE()
+    SET ngaycapnhat = FORMAT(GETDATE(), 'dd/MM/yyyy')
     FROM TAI_KHOAN
     INNER JOIN inserted i ON TAI_KHOAN.id_tk = i.id_tk;
 END;
@@ -1357,8 +1357,8 @@ SELECT
     t.name AS TriggerName, 
     o.name AS TableName,
     t.is_disabled AS IsDisabled, 
-    CONVERT(DATE, t.create_date) AS CreateDate,
-    CONVERT(DATE, t.modify_date) AS ModifyDate
+    FORMAT(t.create_date, 'dd/MM/yyyy') AS CreateDate,
+    FORMAT(t.modify_date, 'dd/MM/yyyy') AS ModifyDate
 FROM 
     sys.triggers t
 JOIN 

@@ -373,7 +373,7 @@ BEGIN
 
     SELECT * 
     FROM vw_SanPham_ChiTiet
-    ORDER BY ngaytao DESC;
+    ORDER BY TRY_CONVERT(date, ngaytao, 103) DESC;
 END;
 GO
 -- WBH_US_SEL_RANKYTSP
@@ -404,7 +404,8 @@ BEGIN
 
     SELECT *
     FROM vw_SanPham_ChiTiet
-    WHERE hangiamgia >= GETDATE();
+    WHERE TRY_CONVERT(date, hangiamgia, 103) >= CAST(GETDATE() AS date)
+          AND TRY_CONVERT(date, hangiamgia, 103) IS NOT NULL;
 END;
 GO
 -- WBH_AD_UPD_SUASP

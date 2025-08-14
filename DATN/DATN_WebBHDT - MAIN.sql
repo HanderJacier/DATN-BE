@@ -473,6 +473,28 @@ BEGIN
     END CATCH
 END;
 GO
+-- WBH_US_SEL_SANPHAM_BY_SANPHAM_DETAIL
+CREATE PROCEDURE WBH_US_SEL_SANPHAM_BY_SANPHAM_DETAIL
+    @p_id_sp INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @v_thuonghieu NVARCHAR(100),
+            @v_loai NVARCHAR(100);
+
+    SELECT 
+        @v_thuonghieu = thuonghieu,
+        @v_loai = loai
+    FROM SAN_PHAM
+    WHERE id_sp = @p_id_sp;
+
+    SELECT *
+    FROM vw_SanPham_ChiTiet
+    WHERE thuonghieu = @v_thuonghieu
+      AND loai = @v_loai;
+END;
+GO
 --END SAN_PHAM
 
 /*-- GIAM_GIA --*/

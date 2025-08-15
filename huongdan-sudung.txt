@@ -1,0 +1,12 @@
+# Dùng Maven Wrapper - Window (không cần cài Maven toàn cục)
+B1. cmd trỏ tới project
+    > cd {path}
+B2. cmd chạy lệnh mvnw clean
+    > mvnw clean
+B3. cmd build lại dự án
+    > mvnw package
+
+cd target
+java -jar DATN-0.0.1-SNAPSHOT.jar
+
+

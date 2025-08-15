@@ -762,6 +762,101 @@ BEGIN
     SELECT @rtn_value AS rtn_value;
 END;
 GO
+-- WBH_US_CRT_DAT_HANG
+CREATE OR ALTER PROCEDURE WBH_US_CRT_DAT_HANG
+    @p_hoveten NVARCHAR(255),
+    @p_sodienthoai VARCHAR(15),
+    @p_email NVARCHAR(255) = NULL,
+    @p_diachi NVARCHAR(255),
+    @p_noidung NVARCHAR(255) = NULL,
+    @p_trangthai NVARCHAR(255) = N'Chờ xác nhận',
+    @p_sanphams NVARCHAR(MAX)  -- JSON string chứa danh sách sản phẩm: [{"sanpham": int, "dongia": decimal, "soluong": int}, ...]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @rtn_value INT = 0;
+    DECLARE @id_tk INT;
+    DECLARE @id_hd INT;
+    DECLARE @giahoadon DECIMAL(18,2) = 0;
+    
+    BEGIN TRY
+        BEGIN TRAN;
+        
+        -- 1. Kiểm tra tài khoản user đã đăng nhập và hợp lệ
+        SELECT @id_tk = id_tk 
+        FROM TAI_KHOAN 
+        WHERE sodienthoai = @p_sodienthoai 
+          AND email = @p_email 
+          AND trangthai = 1; -- Chỉ cho phép tài khoản active
+        
+        IF @id_tk IS NULL
+        BEGIN
+            SET @rtn_value = -1;
+            SELECT @rtn_value AS rtn_value, N'Tài khoản không tồn tại hoặc chưa được kích hoạt' AS message;
+            RETURN;
+        END
+        
+        -- 2. Kiểm tra vai trò (chỉ user, không phải admin)
+        IF EXISTS (SELECT 1 FROM TAI_KHOAN WHERE id_tk = @id_tk AND vaitro = 1)
+        BEGIN
+            SET @rtn_value = -2;
+            SELECT @rtn_value AS rtn_value, N'Tài khoản quản trị không được phép đặt hàng' AS message;
+            RETURN;
+        END
+        
+        -- 3. Tính tổng giá hóa đơn từ danh sách sản phẩm
+        SELECT @giahoadon = SUM(CAST(JSON_VALUE(value, '$.dongia') AS DECIMAL(18,2)) * CAST(JSON_VALUE(value, '$.soluong') AS INT))
+        FROM OPENJSON(@p_sanphams);
+        
+        -- 4. Tạo hóa đơn
+        INSERT INTO HOA_DON (taikhoan, giahoadon, trangthai, noidung)
+        VALUES (@id_tk, @giahoadon, @p_trangthai, @p_noidung);
+        
+        SET @id_hd = SCOPE_IDENTITY();
+        
+        -- 5. Tạo chi tiết hóa đơn từ JSON
+        INSERT INTO HD_CHI_TIET (hoadon, sanpham, dongia, soluong)
+        SELECT 
+            @id_hd,
+            CAST(JSON_VALUE(value, '$.sanpham') AS INT),
+            CAST(JSON_VALUE(value, '$.dongia') AS DECIMAL(18,2)),
+            CAST(JSON_VALUE(value, '$.soluong') AS INT)
+        FROM OPENJSON(@p_sanphams);
+        
+        -- 6. Cập nhật số lượng sản phẩm (giảm tồn kho)
+        UPDATE TS
+        SET TS.soluong = TS.soluong - CAST(JSON_VALUE(SP.value, '$.soluong') AS INT)
+        FROM SP_THONG_SO TS
+        INNER JOIN OPENJSON(@p_sanphams) SP ON TS.sanpham = CAST(JSON_VALUE(SP.value, '$.sanpham') AS INT);
+        
+        -- 7. Tạo địa chỉ nếu cần
+        IF NOT EXISTS (SELECT 1 FROM DIA_CHI WHERE taikhoan = @id_tk AND diachi = @p_diachi)
+        BEGIN
+            INSERT INTO DIA_CHI (taikhoan, diachi)
+            VALUES (@id_tk, @p_diachi);
+        END
+        
+        COMMIT TRAN;
+        
+        -- Trả về kết quả
+        SELECT 
+            0 AS rtn_value,
+            @id_hd AS id_hd,
+            @giahoadon AS giahoadon,
+            @p_trangthai AS trangthai
+        UNION ALL
+        SELECT 1, NULL, NULL, NULL;
+        
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRAN;
+        
+        SET @rtn_value = ERROR_NUMBER();
+        SELECT @rtn_value AS rtn_value, ERROR_MESSAGE() AS message;
+    END CATCH
+END;
+GO
 -- WBH_US_UPD_DOI_MAT_KHAU
 CREATE PROCEDURE WBH_US_UPD_DOI_MAT_KHAU
     @p_id_tk INT,
@@ -826,6 +921,123 @@ BEGIN
     FETCH NEXT @p_pageSize ROWS ONLY;
 END;
 GO
+CREATE PROCEDURE WBH_US_CRT_DAT_HANG_VA_HOA_DON
+    @p_hoveten NVARCHAR(255),
+    @p_sodienthoai NVARCHAR(20),
+    @p_email NVARCHAR(255) = NULL,
+    @p_diachi NVARCHAR(500),
+    @p_noidung NVARCHAR(1000),
+    @p_trangthai NVARCHAR(50),
+    @p_phuongthuc_thanhtoan NVARCHAR(50),
+    @p_sotien_thanhtoan DECIMAL(18,2),
+    @p_sanphams NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @id_hd INT, @id_hoa_don INT;
+    DECLARE @rtn_value INT = 0;
+    DECLARE @message NVARCHAR(500) = '';
+    DECLARE @id_tk INT;
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        -- Tìm tài khoản dựa trên số điện thoại và email
+        SELECT @id_tk = id_tk 
+        FROM TAI_KHOAN 
+        WHERE sodienthoai = @p_sodienthoai 
+          AND (@p_email IS NULL OR email = @p_email)
+          AND trangthai = 1; -- Chỉ tài khoản active
+        
+        -- Nếu không tìm thấy tài khoản, tạo tài khoản mới (guest)
+        IF @id_tk IS NULL
+        BEGIN
+            INSERT INTO TAI_KHOAN (
+                tendangnhap, matkhau, vaitro, hoveten, 
+                sodienthoai, email, trangthai
+            )
+            VALUES (
+                @p_sodienthoai, 'guest123', 0, @p_hoveten,
+                @p_sodienthoai, @p_email, 1
+            );
+            
+            SET @id_tk = SCOPE_IDENTITY();
+        END
+        
+        -- Tính tổng giá hóa đơn từ JSON sản phẩm
+        DECLARE @giahoadon DECIMAL(18,2) = 0;
+        SELECT @giahoadon = SUM(
+            CAST(JSON_VALUE(value, '$.dongia') AS DECIMAL(18,2)) * 
+            CAST(JSON_VALUE(value, '$.soluong') AS INT)
+        )
+        FROM OPENJSON(@p_sanphams);
+        
+        -- Tạo hóa đơn
+        INSERT INTO HOA_DON (
+            taikhoan, giahoadon, trangthai, noidung
+        )
+        VALUES (
+            @id_tk, @giahoadon, @p_trangthai, @p_noidung
+        );
+        
+        SET @id_hd = SCOPE_IDENTITY();
+        SET @id_hoa_don = @id_hd; -- Trong schema này HOA_DON chính là hóa đơn
+        
+        -- Tạo chi tiết hóa đơn từ JSON
+        INSERT INTO HD_CHI_TIET (hoadon, sanpham, dongia, soluong)
+        SELECT 
+            @id_hd,
+            CAST(JSON_VALUE(value, '$.sanpham') AS INT),
+            CAST(JSON_VALUE(value, '$.dongia') AS DECIMAL(18,2)),
+            CAST(JSON_VALUE(value, '$.soluong') AS INT)
+        FROM OPENJSON(@p_sanphams);
+        
+        -- Cập nhật số lượng tồn kho
+        UPDATE TS
+        SET TS.soluong = TS.soluong - CAST(JSON_VALUE(SP.value, '$.soluong') AS INT)
+        FROM SP_THONG_SO TS
+        INNER JOIN OPENJSON(@p_sanphams) SP 
+            ON TS.sanpham = CAST(JSON_VALUE(SP.value, '$.sanpham') AS INT);
+        
+        -- Tạo bản ghi thanh toán
+        INSERT INTO THANH_TOAN (
+            hoadon, phuongthuc, sotien, magiaodich, taikhoan
+        )
+        VALUES (
+            @id_hd, @p_phuongthuc_thanhtoan, @p_sotien_thanhtoan,
+            'ORDER_' + CAST(@id_hd AS NVARCHAR) + '_' + FORMAT(GETDATE(), 'yyyyMMddHHmmss'),
+            @id_tk
+        );
+        
+        -- Tạo địa chỉ nếu chưa có
+        IF NOT EXISTS (
+            SELECT 1 FROM DIA_CHI 
+            WHERE taikhoan = @id_tk AND diachi = @p_diachi
+        )
+        BEGIN
+            INSERT INTO DIA_CHI (taikhoan, diachi)
+            VALUES (@id_tk, @p_diachi);
+        END
+        
+        COMMIT TRANSACTION;
+        
+        SET @message = N'Tạo đơn hàng và hóa đơn thành công';
+        
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+        SET @rtn_value = -1;
+        SET @message = ERROR_MESSAGE();
+    END CATCH
+    
+    -- Trả về kết quả
+    SELECT 
+        @rtn_value as rtn_value,
+        @id_hd as id_hd,
+        @id_hoa_don as id_hoa_don,
+        @message as message;
+END
 -- WBH_AD_UPD_TRANG_THAI_TAI_KHOAN
 CREATE PROCEDURE WBH_AD_UPD_TRANG_THAI_TAI_KHOAN
     @p_id_tk INT,
@@ -874,6 +1086,124 @@ BEGIN
     SELECT SCOPE_IDENTITY() AS id_hd;
 END;
 GO
+CREATE OR ALTER PROCEDURE WBH_US_CRT_HOA_DON_DIEN_TU
+    @p_id_hd INT,
+    @p_id_hoa_don INT,
+    @p_khach_hang NVARCHAR(255),
+    @p_so_dien_thoai NVARCHAR(20),
+    @p_email NVARCHAR(255) = NULL,
+    @p_dia_chi NVARCHAR(500),
+    @p_phuong_thuc_thanh_toan NVARCHAR(100),
+    @p_tong_tien DECIMAL(18,2),
+    @p_ma_giao_dich NVARCHAR(100),
+    @p_chi_tiet_san_pham NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @rtn_value INT = 0;
+    DECLARE @message NVARCHAR(500) = '';
+    DECLARE @invoice_number NVARCHAR(50);
+    DECLARE @current_date NVARCHAR(20);
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        -- Tạo ngày hiện tại dưới dạng string
+        SET @current_date = FORMAT(GETDATE(), 'dd/MM/yyyy');
+        
+        -- Kiểm tra hóa đơn có tồn tại không
+        IF NOT EXISTS (SELECT 1 FROM HOA_DON WHERE id_hd = @p_id_hd)
+        BEGIN
+            SET @rtn_value = -1;
+            SET @message = N'Hóa đơn không tồn tại';
+            SELECT @rtn_value as rtn_value, @message as message;
+            RETURN;
+        END
+        
+        -- Tạo số hóa đơn điện tử
+        SET @invoice_number = 'HD' + RIGHT('00000000' + CAST(@p_id_hoa_don AS NVARCHAR), 8);
+        
+        -- Cập nhật thông tin hóa đơn với thông tin hóa đơn điện tử
+        UPDATE HOA_DON 
+        SET noidung = CONCAT(
+            ISNULL(noidung, ''), 
+            CHAR(13) + CHAR(10) + '=== HÓA ĐƠN ĐIỆN TỬ ===',
+            CHAR(13) + CHAR(10) + 'Số HĐ: ', @invoice_number,
+            CHAR(13) + CHAR(10) + 'Khách hàng: ', @p_khach_hang,
+            CHAR(13) + CHAR(10) + 'SĐT: ', @p_so_dien_thoai,
+            CASE WHEN @p_email IS NOT NULL THEN CHAR(13) + CHAR(10) + 'Email: ' + @p_email ELSE '' END,
+            CHAR(13) + CHAR(10) + 'Địa chỉ: ', @p_dia_chi,
+            CHAR(13) + CHAR(10) + 'Phương thức TT: ', @p_phuong_thuc_thanh_toan,
+            CHAR(13) + CHAR(10) + 'Mã giao dịch: ', @p_ma_giao_dich,
+            CHAR(13) + CHAR(10) + 'Tổng tiền: ', FORMAT(@p_tong_tien, 'N0'), ' VNĐ'
+        )
+        WHERE id_hd = @p_id_hd;
+        
+        -- Cập nhật thông tin thanh toán với mã giao dịch mới
+        UPDATE THANH_TOAN 
+        SET magiaodich = @p_ma_giao_dich,
+            phuongthuc = @p_phuong_thuc_thanh_toan,
+            sotien = @p_tong_tien
+        WHERE hoadon = @p_id_hd;
+        
+        -- Nếu chưa có bản ghi thanh toán, tạo mới
+        IF @@ROWCOUNT = 0
+        BEGIN
+            INSERT INTO THANH_TOAN (
+                hoadon, phuongthuc, sotien, magiaodich, 
+                taikhoan, ngaythanhtoan
+            )
+            SELECT 
+                @p_id_hd, @p_phuong_thuc_thanh_toan, @p_tong_tien, @p_ma_giao_dich,
+                taikhoan, @current_date
+            FROM HOA_DON 
+            WHERE id_hd = @p_id_hd;
+        END
+        
+        -- Cập nhật địa chỉ khách hàng nếu cần
+        DECLARE @taikhoan_id INT;
+        SELECT @taikhoan_id = taikhoan FROM HOA_DON WHERE id_hd = @p_id_hd;
+        
+        IF @taikhoan_id IS NOT NULL
+        BEGIN
+            -- Cập nhật thông tin tài khoản
+            UPDATE TAI_KHOAN 
+            SET hoveten = @p_khach_hang,
+                sodienthoai = @p_so_dien_thoai,
+                email = ISNULL(@p_email, email)
+            WHERE id_tk = @taikhoan_id;
+            
+            -- Thêm địa chỉ nếu chưa có
+            IF NOT EXISTS (
+                SELECT 1 FROM DIA_CHI 
+                WHERE taikhoan = @taikhoan_id AND diachi = @p_dia_chi
+            )
+            BEGIN
+                INSERT INTO DIA_CHI (taikhoan, diachi)
+                VALUES (@taikhoan_id, @p_dia_chi);
+            END
+        END
+        
+        COMMIT TRANSACTION;
+        
+        SET @message = N'Tạo hóa đơn điện tử thành công';
+        
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+        SET @rtn_value = ERROR_NUMBER();
+        SET @message = ERROR_MESSAGE();
+    END CATCH
+    
+    -- Trả về kết quả theo format mà Vue.js code mong đợi
+    SELECT 
+        @rtn_value as rtn_value,
+        @message as message,
+        @invoice_number as invoice_number,
+        @p_id_hd as id_hd,
+        @p_id_hoa_don as id_hoa_don;
+END
 -- WBH_US_CRT_HOA_DON_CHI_TIET
 CREATE PROCEDURE WBH_US_CRT_HOA_DON_CHI_TIET
     @p_hoadon INT,

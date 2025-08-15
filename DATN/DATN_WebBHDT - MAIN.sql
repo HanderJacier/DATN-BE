@@ -206,52 +206,44 @@ GO
 CREATE VIEW vw_SanPham_ChiTiet
 AS
 SELECT 
-    -- Thông tin sản phẩm chính
     SP.id_sp,
     SP.tensanpham,
     SP.dongia,
-
     SP.loai,
     L.loaiTen,
-
     SP.thuonghieu,
     TH.thuonghieuTen,
-
     SP.anhgoc,
     SP.hangiamgia,
     SP.ngaytao,
-
     SP.loaigiam,
     GG.loaigiamTen,
     SP.giamgia,
 
     -- Thông số kỹ thuật
     TS.id_ts,
-    
     TS.model,
     TS.trongluong,
     TS.pin,
     TS.congketnoi,
     TS.tinhnang,
-    
     TS.mausac,
     TS.soluong,
 
-    -- Ảnh phụ
-    A.id_a,
-    A.diachianh,
+    -- Gom tất cả ảnh phụ thành một chuỗi phân tách bởi dấu phẩy
+    A.ds_anh_phu,
 
     -- Đánh giá
     DG.id_dg,
-	DG.taikhoan as dg_taikhoan,
-	DG.sanpham as dg_sanpham,
-	DG.noidung,
-	DG.diemso,
+    DG.taikhoan as dg_taikhoan,
+    DG.sanpham as dg_sanpham,
+    DG.noidung,
+    DG.diemso,
 
     -- Yêu thích
     YT.id_yt,
-	YT.sanpham as yt_sanpham,
-	YT.taikhoan as yt_taikhoan,
+    YT.sanpham as yt_sanpham,
+    YT.taikhoan as yt_taikhoan,
     YT.trangthai
 FROM 
     SAN_PHAM SP
@@ -259,9 +251,15 @@ LEFT JOIN SP_LOAI L ON SP.loai = L.id_l
 LEFT JOIN SP_THUONG_HIEU TH ON SP.thuonghieu = TH.id_th
 LEFT JOIN GIAM_GIA GG ON SP.loaigiam = GG.id_gg
 LEFT JOIN SP_THONG_SO TS ON SP.id_sp = TS.sanpham
-LEFT JOIN ANH_SP A ON SP.id_sp = A.sanpham
+
+LEFT JOIN (
+    SELECT sanpham, STRING_AGG(diachianh, ',') AS ds_anh_phu
+    FROM ANH_SP
+    GROUP BY sanpham
+) A ON SP.id_sp = A.sanpham
+
 LEFT JOIN DANH_GIA DG ON SP.id_sp = DG.sanpham
-LEFT JOIN YEU_THICH YT ON SP.id_sp = YT.sanpham
+LEFT JOIN YEU_THICH YT ON SP.id_sp = YT.sanpham;
 GO
 /*===== TRIGGER =====*/
 --trg_auto_dayedit_taikhoan
@@ -383,17 +381,58 @@ BEGIN
     SET NOCOUNT ON;
 
     SELECT 
-        SPCT.*, 
+        SP.id_sp,
+        SP.tensanpham,
+        SP.dongia,
+        SP.loai,
+        SP.loaiTen,
+        SP.thuonghieu,
+        SP.thuonghieuTen,
+        SP.anhgoc,
+        SP.hangiamgia,
+        SP.ngaytao,
+        SP.loaigiam,
+        SP.loaigiamTen,
+        SP.giamgia,
         ISNULL(YT.SoYeuThich, 0) AS SoYeuThich
     FROM 
-        vw_SanPham_ChiTiet SPCT
+    (
+        SELECT 
+            id_sp,
+            tensanpham,
+            dongia,
+            loai,
+            loaiTen,
+            thuonghieu,
+            thuonghieuTen,
+            anhgoc,
+            hangiamgia,
+            ngaytao,
+            loaigiam,
+            loaigiamTen,
+            giamgia
+        FROM vw_SanPham_ChiTiet
+        GROUP BY 
+            id_sp,
+            tensanpham,
+            dongia,
+            loai,
+            loaiTen,
+            thuonghieu,
+            thuonghieuTen,
+            anhgoc,
+            hangiamgia,
+            ngaytao,
+            loaigiam,
+            loaigiamTen,
+            giamgia
+    ) SP
     LEFT JOIN (
         SELECT sanpham, COUNT(*) AS SoYeuThich
         FROM YEU_THICH
         GROUP BY sanpham
-    ) YT ON SPCT.id_sp = YT.sanpham
-    ORDER BY 
-        YT.SoYeuThich DESC;
+    ) YT ON SP.id_sp = YT.sanpham
+    ORDER BY YT.SoYeuThich DESC;
 END;
 GO
 -- WBH_US_SEL_SALESP
@@ -513,14 +552,14 @@ GO
 /*-- GOP_Y --*/
 -- WBH_US_CRT_GY
 CREATE PROCEDURE WBH_US_CRT_GY
-    @id_tk INT,
-    @noidung NVARCHAR(255)
+    @p_id_tk INT,
+    @p_noidung NVARCHAR(255)
 AS
 BEGIN
     SET NOCOUNT ON;
 
     INSERT INTO GOP_Y(taikhoan, noidung)
-    VALUES (@id_tk, @noidung);
+    VALUES (@p_id_tk, @p_noidung);
 
     SELECT 1
 END;
@@ -548,26 +587,28 @@ GO
 /*-- YEU_THICH --*/
 -- WBH_US_UPD_CAPNHAT_YT_SP
 CREATE PROCEDURE WBH_US_UPD_CAPNHAT_YT_SP
-    @sanpham INT,
-    @taikhoan INT
+    @p_sanpham INT,
+    @p_taikhoan INT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     IF EXISTS (
         SELECT 1 FROM YEU_THICH 
-        WHERE sanpham = @sanpham AND taikhoan = @taikhoan
+        WHERE sanpham = @p_sanpham AND taikhoan = @p_taikhoan
     )
     BEGIN
         UPDATE YEU_THICH
         SET trangthai = CASE WHEN trangthai = 'Y' THEN 'N' ELSE 'Y' END
-        WHERE sanpham = @sanpham AND taikhoan = @taikhoan;
+        WHERE sanpham = @p_sanpham AND taikhoan = @p_taikhoan;
+        SELECT 1;
     END
     ELSE
     BEGIN
         -- Nếu chưa có, thêm mới với trạng thái 1 (yêu thích)
         INSERT INTO YEU_THICH(sanpham, taikhoan, trangthai)
-        VALUES (@sanpham, @taikhoan, 'Y');
+        VALUES (@p_sanpham, @p_taikhoan, 'Y');
+        SELECT 2;
     END
 END;
 GO
@@ -1236,6 +1277,340 @@ BEGIN
     WHERE tt.magiaodich = @p_orderId;
 END;
 GO
+-- WBH_US_CRT_DAT_HANG
+CREATE OR ALTER PROCEDURE WBH_US_CRT_DAT_HANG
+    @p_hoveten NVARCHAR(255),
+    @p_sodienthoai VARCHAR(15),
+    @p_email NVARCHAR(255) = NULL,
+    @p_diachi NVARCHAR(255),
+    @p_noidung NVARCHAR(255) = NULL,
+    @p_trangthai NVARCHAR(255) = N'Chờ xác nhận',
+    @p_sanphams NVARCHAR(MAX)  -- JSON string chứa danh sách sản phẩm: [{"sanpham": int, "dongia": decimal, "soluong": int}, ...]
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @rtn_value INT = 0;
+    DECLARE @id_tk INT;
+    DECLARE @id_hd INT;
+    DECLARE @giahoadon DECIMAL(18,2) = 0;
+    
+    BEGIN TRY
+        BEGIN TRAN;
+        
+        -- 1. Kiểm tra tài khoản user đã đăng nhập và hợp lệ
+        SELECT @id_tk = id_tk 
+        FROM TAI_KHOAN 
+        WHERE sodienthoai = @p_sodienthoai 
+          AND email = @p_email 
+          AND trangthai = 1; -- Chỉ cho phép tài khoản active
+        
+        IF @id_tk IS NULL
+        BEGIN
+            SET @rtn_value = -1;
+            SELECT @rtn_value AS rtn_value, N'Tài khoản không tồn tại hoặc chưa được kích hoạt' AS message;
+            RETURN;
+        END
+        
+        -- 2. Kiểm tra vai trò (chỉ user, không phải admin)
+        IF EXISTS (SELECT 1 FROM TAI_KHOAN WHERE id_tk = @id_tk AND vaitro = 1)
+        BEGIN
+            SET @rtn_value = -2;
+            SELECT @rtn_value AS rtn_value, N'Tài khoản quản trị không được phép đặt hàng' AS message;
+            RETURN;
+        END
+        
+        -- 3. Tính tổng giá hóa đơn từ danh sách sản phẩm
+        SELECT @giahoadon = SUM(CAST(JSON_VALUE(value, '$.dongia') AS DECIMAL(18,2)) * CAST(JSON_VALUE(value, '$.soluong') AS INT))
+        FROM OPENJSON(@p_sanphams);
+        
+        -- 4. Tạo hóa đơn
+        INSERT INTO HOA_DON (taikhoan, giahoadon, trangthai, noidung)
+        VALUES (@id_tk, @giahoadon, @p_trangthai, @p_noidung);
+        
+        SET @id_hd = SCOPE_IDENTITY();
+        
+        -- 5. Tạo chi tiết hóa đơn từ JSON
+        INSERT INTO HD_CHI_TIET (hoadon, sanpham, dongia, soluong)
+        SELECT 
+            @id_hd,
+            CAST(JSON_VALUE(value, '$.sanpham') AS INT),
+            CAST(JSON_VALUE(value, '$.dongia') AS DECIMAL(18,2)),
+            CAST(JSON_VALUE(value, '$.soluong') AS INT)
+        FROM OPENJSON(@p_sanphams);
+        
+        -- 6. Cập nhật số lượng sản phẩm (giảm tồn kho)
+        UPDATE TS
+        SET TS.soluong = TS.soluong - CAST(JSON_VALUE(SP.value, '$.soluong') AS INT)
+        FROM SP_THONG_SO TS
+        INNER JOIN OPENJSON(@p_sanphams) SP ON TS.sanpham = CAST(JSON_VALUE(SP.value, '$.sanpham') AS INT);
+        
+        -- 7. Tạo địa chỉ nếu cần
+        IF NOT EXISTS (SELECT 1 FROM DIA_CHI WHERE taikhoan = @id_tk AND diachi = @p_diachi)
+        BEGIN
+            INSERT INTO DIA_CHI (taikhoan, diachi)
+            VALUES (@id_tk, @p_diachi);
+        END
+        
+        COMMIT TRAN;
+        
+        -- Trả về kết quả
+        SELECT 
+            0 AS rtn_value,
+            @id_hd AS id_hd,
+            @giahoadon AS giahoadon,
+            @p_trangthai AS trangthai
+        UNION ALL
+        SELECT 1, NULL, NULL, NULL;
+        
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0 ROLLBACK TRAN;
+        
+        SET @rtn_value = ERROR_NUMBER();
+        SELECT @rtn_value AS rtn_value, ERROR_MESSAGE() AS message;
+    END CATCH
+END;
+GO
+-- WBH_US_CRT_DAT_HANG_VA_HOA_DON
+CREATE PROCEDURE WBH_US_CRT_DAT_HANG_VA_HOA_DON
+    @p_hoveten NVARCHAR(255),
+    @p_sodienthoai NVARCHAR(20),
+    @p_email NVARCHAR(255) = NULL,
+    @p_diachi NVARCHAR(500),
+    @p_noidung NVARCHAR(1000),
+    @p_trangthai NVARCHAR(50),
+    @p_phuongthuc_thanhtoan NVARCHAR(50),
+    @p_sotien_thanhtoan DECIMAL(18,2),
+    @p_sanphams NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @id_hd INT, @id_hoa_don INT;
+    DECLARE @rtn_value INT = 0;
+    DECLARE @message NVARCHAR(500) = '';
+    DECLARE @id_tk INT;
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        -- Tìm tài khoản dựa trên số điện thoại và email
+        SELECT @id_tk = id_tk 
+        FROM TAI_KHOAN 
+        WHERE sodienthoai = @p_sodienthoai 
+          AND (@p_email IS NULL OR email = @p_email)
+          AND trangthai = 1; -- Chỉ tài khoản active
+        
+        -- Nếu không tìm thấy tài khoản, tạo tài khoản mới (guest)
+        IF @id_tk IS NULL
+        BEGIN
+            INSERT INTO TAI_KHOAN (
+                tendangnhap, matkhau, vaitro, hoveten, 
+                sodienthoai, email, trangthai
+            )
+            VALUES (
+                @p_sodienthoai, 'guest123', 0, @p_hoveten,
+                @p_sodienthoai, @p_email, 1
+            );
+            
+            SET @id_tk = SCOPE_IDENTITY();
+        END
+        
+        -- Tính tổng giá hóa đơn từ JSON sản phẩm
+        DECLARE @giahoadon DECIMAL(18,2) = 0;
+        SELECT @giahoadon = SUM(
+            CAST(JSON_VALUE(value, '$.dongia') AS DECIMAL(18,2)) * 
+            CAST(JSON_VALUE(value, '$.soluong') AS INT)
+        )
+        FROM OPENJSON(@p_sanphams);
+        
+        -- Tạo hóa đơn
+        INSERT INTO HOA_DON (
+            taikhoan, giahoadon, trangthai, noidung
+        )
+        VALUES (
+            @id_tk, @giahoadon, @p_trangthai, @p_noidung
+        );
+        
+        SET @id_hd = SCOPE_IDENTITY();
+        SET @id_hoa_don = @id_hd; -- Trong schema này HOA_DON chính là hóa đơn
+        
+        -- Tạo chi tiết hóa đơn từ JSON
+        INSERT INTO HD_CHI_TIET (hoadon, sanpham, dongia, soluong)
+        SELECT 
+            @id_hd,
+            CAST(JSON_VALUE(value, '$.sanpham') AS INT),
+            CAST(JSON_VALUE(value, '$.dongia') AS DECIMAL(18,2)),
+            CAST(JSON_VALUE(value, '$.soluong') AS INT)
+        FROM OPENJSON(@p_sanphams);
+        
+        -- Cập nhật số lượng tồn kho
+        UPDATE TS
+        SET TS.soluong = TS.soluong - CAST(JSON_VALUE(SP.value, '$.soluong') AS INT)
+        FROM SP_THONG_SO TS
+        INNER JOIN OPENJSON(@p_sanphams) SP 
+            ON TS.sanpham = CAST(JSON_VALUE(SP.value, '$.sanpham') AS INT);
+        
+        -- Tạo bản ghi thanh toán
+        INSERT INTO THANH_TOAN (
+            hoadon, phuongthuc, sotien, magiaodich, taikhoan
+        )
+        VALUES (
+            @id_hd, @p_phuongthuc_thanhtoan, @p_sotien_thanhtoan,
+            'ORDER_' + CAST(@id_hd AS NVARCHAR) + '_' + FORMAT(GETDATE(), 'yyyyMMddHHmmss'),
+            @id_tk
+        );
+        
+        -- Tạo địa chỉ nếu chưa có
+        IF NOT EXISTS (
+            SELECT 1 FROM DIA_CHI 
+            WHERE taikhoan = @id_tk AND diachi = @p_diachi
+        )
+        BEGIN
+            INSERT INTO DIA_CHI (taikhoan, diachi)
+            VALUES (@id_tk, @p_diachi);
+        END
+        
+        COMMIT TRANSACTION;
+        
+        SET @message = N'Tạo đơn hàng và hóa đơn thành công';
+        
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+        SET @rtn_value = -1;
+        SET @message = ERROR_MESSAGE();
+    END CATCH
+    
+    -- Trả về kết quả
+    SELECT 
+        @rtn_value as rtn_value,
+        @id_hd as id_hd,
+        @id_hoa_don as id_hoa_don,
+        @message as message;
+END;
+GO
+-- WBH_US_CRT_HOA_DON_DIEN_TU
+CREATE OR ALTER PROCEDURE WBH_US_CRT_HOA_DON_DIEN_TU
+    @p_id_hd INT,
+    @p_id_hoa_don INT,
+    @p_khach_hang NVARCHAR(255),
+    @p_so_dien_thoai NVARCHAR(20),
+    @p_email NVARCHAR(255) = NULL,
+    @p_dia_chi NVARCHAR(500),
+    @p_phuong_thuc_thanh_toan NVARCHAR(100),
+    @p_tong_tien DECIMAL(18,2),
+    @p_ma_giao_dich NVARCHAR(100),
+    @p_chi_tiet_san_pham NVARCHAR(MAX)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @rtn_value INT = 0;
+    DECLARE @message NVARCHAR(500) = '';
+    DECLARE @invoice_number NVARCHAR(50);
+    DECLARE @current_date NVARCHAR(20);
+    
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        
+        -- Tạo ngày hiện tại dưới dạng string
+        SET @current_date = FORMAT(GETDATE(), 'dd/MM/yyyy');
+        
+        -- Kiểm tra hóa đơn có tồn tại không
+        IF NOT EXISTS (SELECT 1 FROM HOA_DON WHERE id_hd = @p_id_hd)
+        BEGIN
+            SET @rtn_value = -1;
+            SET @message = N'Hóa đơn không tồn tại';
+            SELECT @rtn_value as rtn_value, @message as message;
+            RETURN;
+        END
+        
+        -- Tạo số hóa đơn điện tử
+        SET @invoice_number = 'HD' + RIGHT('00000000' + CAST(@p_id_hoa_don AS NVARCHAR), 8);
+        
+        -- Cập nhật thông tin hóa đơn với thông tin hóa đơn điện tử
+        UPDATE HOA_DON 
+        SET noidung = CONCAT(
+            ISNULL(noidung, ''), 
+            CHAR(13) + CHAR(10) + '=== HÓA ĐƠN ĐIỆN TỬ ===',
+            CHAR(13) + CHAR(10) + 'Số HĐ: ', @invoice_number,
+            CHAR(13) + CHAR(10) + 'Khách hàng: ', @p_khach_hang,
+            CHAR(13) + CHAR(10) + 'SĐT: ', @p_so_dien_thoai,
+            CASE WHEN @p_email IS NOT NULL THEN CHAR(13) + CHAR(10) + 'Email: ' + @p_email ELSE '' END,
+            CHAR(13) + CHAR(10) + 'Địa chỉ: ', @p_dia_chi,
+            CHAR(13) + CHAR(10) + 'Phương thức TT: ', @p_phuong_thuc_thanh_toan,
+            CHAR(13) + CHAR(10) + 'Mã giao dịch: ', @p_ma_giao_dich,
+            CHAR(13) + CHAR(10) + 'Tổng tiền: ', FORMAT(@p_tong_tien, 'N0'), ' VNĐ'
+        )
+        WHERE id_hd = @p_id_hd;
+        
+        -- Cập nhật thông tin thanh toán với mã giao dịch mới
+        UPDATE THANH_TOAN 
+        SET magiaodich = @p_ma_giao_dich,
+            phuongthuc = @p_phuong_thuc_thanh_toan,
+            sotien = @p_tong_tien
+        WHERE hoadon = @p_id_hd;
+        
+        -- Nếu chưa có bản ghi thanh toán, tạo mới
+        IF @@ROWCOUNT = 0
+        BEGIN
+            INSERT INTO THANH_TOAN (
+                hoadon, phuongthuc, sotien, magiaodich, 
+                taikhoan, ngaythanhtoan
+            )
+            SELECT 
+                @p_id_hd, @p_phuong_thuc_thanh_toan, @p_tong_tien, @p_ma_giao_dich,
+                taikhoan, @current_date
+            FROM HOA_DON 
+            WHERE id_hd = @p_id_hd;
+        END
+        
+        -- Cập nhật địa chỉ khách hàng nếu cần
+        DECLARE @taikhoan_id INT;
+        SELECT @taikhoan_id = taikhoan FROM HOA_DON WHERE id_hd = @p_id_hd;
+        
+        IF @taikhoan_id IS NOT NULL
+        BEGIN
+            -- Cập nhật thông tin tài khoản
+            UPDATE TAI_KHOAN 
+            SET hoveten = @p_khach_hang,
+                sodienthoai = @p_so_dien_thoai,
+                email = ISNULL(@p_email, email)
+            WHERE id_tk = @taikhoan_id;
+            
+            -- Thêm địa chỉ nếu chưa có
+            IF NOT EXISTS (
+                SELECT 1 FROM DIA_CHI 
+                WHERE taikhoan = @taikhoan_id AND diachi = @p_dia_chi
+            )
+            BEGIN
+                INSERT INTO DIA_CHI (taikhoan, diachi)
+                VALUES (@taikhoan_id, @p_dia_chi);
+            END
+        END
+        
+        COMMIT TRANSACTION;
+        
+        SET @message = N'Tạo hóa đơn điện tử thành công';
+        
+    END TRY
+    BEGIN CATCH
+        ROLLBACK TRANSACTION;
+        SET @rtn_value = ERROR_NUMBER();
+        SET @message = ERROR_MESSAGE();
+    END CATCH
+    
+    -- Trả về kết quả theo format mà Vue.js code mong đợi
+    SELECT 
+        @rtn_value as rtn_value,
+        @message as message,
+        @invoice_number as invoice_number,
+        @p_id_hd as id_hd,
+        @p_id_hoa_don as id_hoa_don;
+END
+GO
 --END HOA_DON
 
 /*-- THONG_KE --*/
@@ -1435,3 +1810,69 @@ VALUES
 (N'user9', N'123456', 0, N'Bùi Văn I', '0900000009', N'user9@example.com', 1),
 (N'user10', N'123456', 0, N'Vũ Thị J', '0900000010', N'user10@example.com', 1);
 GO
+
+/* ===== INSERT DATA CHO BẢNG CHƯA CÓ ===== */
+
+/* DIA_CHI */
+INSERT INTO DIA_CHI (taikhoan, diachi) VALUES
+(2, N'123 Nguyễn Trãi, Hà Nội'),
+(3, N'456 Lê Lợi, TP.HCM'),
+(4, N'789 Trần Hưng Đạo, Đà Nẵng');
+
+/* SAN_PHAM + SP_THONG_SO + ANH_SP */
+INSERT INTO SAN_PHAM (tensanpham, dongia, loai, thuonghieu, anhgoc, loaigiam, hangiamgia, giamgia)
+VALUES
+(N'iPhone 15 Pro Max', 39000000, 1, 4, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1751982398/15promaxtitantrangtinhtemobile_81af45e9aa4e4c9a99c08275843b7220_1024x1024_rylfzx.png', 3, N'31/12/2025', 35100000),
+(N'Samsung Galaxy S24 Ultra', 28000000, 1, 6, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1751982514/xiaomi-14_2__4_jdopoz.webp', 2, N'31/12/2025', 26600000),
+(N'Asus ROG Laptop', 42000000, 3, 5, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1751718316/Huawei-Mate-60-Pro-chinh-hang_tlnvtg.jpg', 4, N'31/12/2025', 35700000);
+
+-- Thông số
+INSERT INTO SP_THONG_SO (sanpham, model, trongluong, pin, congketnoi, tinhnang, mausac, soluong) VALUES
+(1, N'Model IP15PM', N'221g', N'4500mAh', N'USB-C', N'Cấu hình mạnh mẽ', N'Titan', 5),
+(2, N'Model S24U', N'228g', N'5000mAh', N'USB-C', N'Camera 200MP', N'Đen', 10),
+(3, N'Model ROG', N'2.3kg', N'90Wh', N'USB-C + HDMI', N'Gaming cao cấp', N'Đen', 3);
+
+-- Ảnh phụ
+INSERT INTO ANH_SP (sanpham, diachianh) VALUES
+(1, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1751982356/iphone-15-pro-max_sr3kih.png'),
+(2, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1751982455/samsung-galaxy-s24-ultra-5g_x9mz9s.jpg'),
+(3, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1751982541/oppo-reno-10-tgdd-321312312313121-1-250523-091139-800-resize_zgiczf.jpg');
+
+/* HOA_DON */
+INSERT INTO HOA_DON (taikhoan, giahoadon, trangthai, noidung)
+VALUES
+(2, 39000000, N'Chờ thanh toán', N'Mua iPhone 15 Pro Max'),
+(3, 28000000, N'Đã thanh toán', N'Mua Samsung Galaxy S24 Ultra');
+
+/* HD_CHI_TIET */
+INSERT INTO HD_CHI_TIET (hoadon, sanpham, dongia, soluong)
+VALUES
+(1, 1, 39000000, 1),
+(2, 2, 28000000, 1);
+
+/* THANH_TOAN */
+INSERT INTO THANH_TOAN (hoadon, phuongthuc, sotien, ngaythanhtoan, magiaodich, taikhoan)
+VALUES
+(2, N'Tiền mặt', 28000000, FORMAT(GETDATE(), 'dd/MM/yyyy'), N'TT001', 3);
+
+/* GIO_HANG */
+INSERT INTO GIO_HANG (sanpham, taikhoan) VALUES
+(3, 2),
+(2, 4);
+
+/* GOP_Y */
+INSERT INTO GOP_Y (taikhoan, noidung, ngaycapnhat)
+VALUES
+(2, N'Sản phẩm rất tốt!', FORMAT(GETDATE(), 'dd/MM/yyyy')),
+(3, N'Giao hàng hơi chậm', FORMAT(GETDATE(), 'dd/MM/yyyy'));
+
+/* DANH_GIA */
+INSERT INTO DANH_GIA (taikhoan, sanpham, noidung, diemso)
+VALUES
+(2, 1, N'Siêu phẩm!', 5),
+(3, 2, N'Rất hài lòng', 4);
+
+/* YEU_THICH */
+INSERT INTO YEU_THICH (sanpham, taikhoan, trangthai) VALUES
+(1, 1, 'Y'),
+(3, 1, 'Y');

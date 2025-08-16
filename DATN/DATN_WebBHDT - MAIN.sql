@@ -234,16 +234,16 @@ SELECT
     A.ds_anh_phu
 FROM 
     SAN_PHAM SP
-LEFT JOIN SP_LOAI L ON SP.loai = L.id_l
-LEFT JOIN SP_THUONG_HIEU TH ON SP.thuonghieu = TH.id_th
-LEFT JOIN GIAM_GIA GG ON SP.loaigiam = GG.id_gg
-LEFT JOIN SP_THONG_SO TS ON SP.id_sp = TS.sanpham
-
-LEFT JOIN (
-    SELECT sanpham, STRING_AGG(diachianh, ',') AS ds_anh_phu
-    FROM ANH_SP
-    GROUP BY sanpham
-) A ON SP.id_sp = A.sanpham
+    JOIN SP_LOAI L ON SP.loai = L.id_l
+    JOIN SP_THUONG_HIEU TH ON SP.thuonghieu = TH.id_th
+    JOIN GIAM_GIA GG ON SP.loaigiam = GG.id_gg
+    JOIN SP_THONG_SO TS ON SP.id_sp = TS.sanpham
+    JOIN YEU_THICH YT ON SP.id_sp = YT.sanpham
+    JOIN (
+        SELECT sanpham, STRING_AGG(diachianh, ',') AS ds_anh_phu
+        FROM ANH_SP
+        GROUP BY sanpham
+    ) A ON SP.id_sp = A.sanpham
 GO
 /*===== TRIGGER =====*/
 --trg_auto_dayedit_taikhoan
@@ -519,6 +519,21 @@ BEGIN
     FROM vw_SanPham_ChiTiet
     WHERE thuonghieu = @v_thuonghieu
       AND loai = @v_loai;
+END;
+GO
+-- WBH_US_SEL_SP_YT
+CREATE PROCEDURE WBH_US_SEL_SP_YT
+    @p_id_tk INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT * 
+    FROM YEU_THICH YT
+         JOIN SAN_PHAM SP ON SP.id_sp = YT.sanpham
+         JOIN SP_THONG_SO TS ON TS.sanpham = SP.id_sp
+    WHERE YT.taikhoan = @p_id_tk
+        and YT.trangthai = 'Y'
 END;
 GO
 --END SAN_PHAM
@@ -882,6 +897,43 @@ BEGIN
     WHERE id_tk = @p_id_tk;
     
     SELECT @@ROWCOUNT AS affected_rows;
+END;
+GO
+-- WBH_US_UPD_DIACHI
+CREATE PROCEDURE WBH_US_UPD_DIACHI
+    @p_action INT,
+    @p_id_dc INT,
+    @p_taikhoan INT,
+    @p_diachi NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    IF @p_action = 1   -- Thêm mới
+    BEGIN
+        INSERT INTO DIA_CHI (taikhoan, diachi)
+        VALUES (@p_taikhoan, @p_diachi);
+        SELECT 1;
+    END
+    ELSE IF @p_action = 2  -- Xóa
+    BEGIN
+        DELETE FROM DIA_CHI
+        WHERE id_dc = @p_id_dc
+          AND taikhoan = @p_taikhoan;
+        SELECT 2;
+    END
+    ELSE IF @p_action = 3  -- Cập nhật
+    BEGIN
+        UPDATE DIA_CHI
+        SET diachi = @p_diachi
+        WHERE id_dc = @p_id_dc
+          AND taikhoan = @p_taikhoan;
+        SELECT 3;
+    END
+    ELSE
+    BEGIN
+        SELECT 'ERROR';
+    END
 END;
 GO
 --END TAI_KHOAN

@@ -238,7 +238,6 @@ FROM
     JOIN SP_THUONG_HIEU TH ON SP.thuonghieu = TH.id_th
     JOIN GIAM_GIA GG ON SP.loaigiam = GG.id_gg
     JOIN SP_THONG_SO TS ON SP.id_sp = TS.sanpham
-    JOIN YEU_THICH YT ON SP.id_sp = YT.sanpham
     JOIN (
         SELECT sanpham, STRING_AGG(diachianh, ',') AS ds_anh_phu
         FROM ANH_SP

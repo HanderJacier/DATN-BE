@@ -499,27 +499,78 @@ BEGIN
 END;
 GO
 -- WBH_US_SEL_SANPHAM_BY_SANPHAM_DETAIL
-CREATE PROCEDURE WBH_US_SEL_SANPHAM_BY_SANPHAM_DETAIL
+CREATE OR ALTER PROCEDURE WBH_US_SEL_SANPHAM_BY_SANPHAM_DETAIL
     @p_id_sp INT
 AS
 BEGIN
     SET NOCOUNT ON;
 
-    DECLARE @v_thuonghieu NVARCHAR(100),
-            @v_loai NVARCHAR(100);
+    DECLARE @v_thuonghieu INT,
+            @v_loai       INT;
 
+    -- Lấy loại & thương hiệu của sản phẩm nguồn
     SELECT 
         @v_thuonghieu = thuonghieu,
-        @v_loai = loai
+        @v_loai       = loai
     FROM SAN_PHAM
     WHERE id_sp = @p_id_sp;
 
-    SELECT *
-    FROM vw_SanPham_ChiTiet
-    WHERE thuonghieu = @v_thuonghieu
-      AND loai = @v_loai;
+    -- Nếu không tìm thấy id_sp nguồn => trả ngẫu nhiên 4 sp khác nhau
+    IF @v_loai IS NULL
+    BEGIN
+        SELECT TOP (4) *
+        FROM vw_SanPham_ChiTiet
+        WHERE id_sp <> @p_id_sp
+        ORDER BY NEWID();
+        RETURN;
+    END
+
+    -- Tập kết quả tạm
+    DECLARE @res TABLE (
+        id_sp INT PRIMARY KEY
+    );
+
+    -- 1) Cùng loại + cùng thương hiệu (ưu tiên)
+    INSERT INTO @res (id_sp)
+    SELECT TOP (4) v.id_sp
+    FROM vw_SanPham_ChiTiet v
+    WHERE v.id_sp <> @p_id_sp
+      AND v.loai = @v_loai
+      AND v.thuonghieu = @v_thuonghieu
+    ORDER BY NEWID();  -- random trong nhóm ưu tiên
+
+    -- 2) Nếu chưa đủ 4: cùng loại (bỏ ràng buộc thương hiệu)
+    DECLARE @need INT = 4 - (SELECT COUNT(*) FROM @res);
+    IF @need > 0
+    BEGIN
+        INSERT INTO @res (id_sp)
+        SELECT TOP (@need) v.id_sp
+        FROM vw_SanPham_ChiTiet v
+        WHERE v.id_sp <> @p_id_sp
+          AND v.loai = @v_loai
+          AND v.id_sp NOT IN (SELECT id_sp FROM @res)
+        ORDER BY NEWID();
+    END
+
+    -- 3) Nếu vẫn thiếu: lấy ngẫu nhiên bất kỳ (trừ bản thân & trừ đã chọn)
+    SET @need = 4 - (SELECT COUNT(*) FROM @res);
+    IF @need > 0
+    BEGIN
+        INSERT INTO @res (id_sp)
+        SELECT TOP (@need) v.id_sp
+        FROM vw_SanPham_ChiTiet v
+        WHERE v.id_sp <> @p_id_sp
+          AND v.id_sp NOT IN (SELECT id_sp FROM @res)
+        ORDER BY NEWID();
+    END
+
+    -- Trả chi tiết cho các id đã chọn
+    SELECT v.*
+    FROM vw_SanPham_ChiTiet v
+    JOIN @res r ON r.id_sp = v.id_sp;
 END;
 GO
+
 -- WBH_US_SEL_SP_YT
 CREATE PROCEDURE WBH_US_SEL_SP_YT
     @p_id_tk INT

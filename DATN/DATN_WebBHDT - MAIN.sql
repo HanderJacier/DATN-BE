@@ -625,15 +625,19 @@ BEGIN
     SET NOCOUNT ON;
 
     SELECT 
-        *
-    FROM 
-        GOP_Y
-    ORDER BY 
-        ngaytao DESC
+        g.id_gy,
+        g.taikhoan,
+        tk.hoveten, -- hoặc tk.hovaten nếu bạn muốn lấy họ tên
+        g.noidung,
+        g.ngaytao
+    FROM GOP_Y g
+    LEFT JOIN TAI_KHOAN tk ON g.taikhoan = tk.id_tk
+    ORDER BY g.ngaytao DESC
     OFFSET (@p_pageNo - 1) * @p_pageSize ROWS
     FETCH NEXT @p_pageSize ROWS ONLY;
 END;
 GO
+
 --END GOP_Y
 
 /*-- YEU_THICH --*/

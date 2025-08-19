@@ -1820,6 +1820,26 @@ BEGIN
     SELECT @@ROWCOUNT AS affected_rows;
 END;
 GO
+-- WBH_US_SEL_DIACHI_THEO_TAIKHOAN
+CREATE PROCEDURE WBH_US_SEL_DIACHI_THEO_TAIKHOAN
+    @p_taikhoan INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        dc.id_dc,
+        dc.taikhoan,
+        tk.hoveten,
+        tk.sodienthoai,
+        tk.email,
+        dc.diachi
+    FROM DIA_CHI dc
+    JOIN TAI_KHOAN tk ON tk.id_tk = dc.taikhoan
+    WHERE dc.taikhoan = @p_taikhoan
+    ORDER BY dc.id_dc DESC;
+END;
+GO
 
 /*===== CHECK TRIGGER =====*/
 SELECT

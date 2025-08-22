@@ -682,6 +682,114 @@ BEGIN
     ORDER BY ngaytao DESC;
 END;
 GO
+-- Updated stored procedures to work with existing TAI_KHOAN schema without adding new columns
+
+-- WBH_US_SEL_GOOGLE_LOGIN
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'WBH_US_SEL_GOOGLE_LOGIN')
+BEGIN
+    DROP PROCEDURE WBH_US_SEL_GOOGLE_LOGIN;
+END
+GO
+
+CREATE PROCEDURE WBH_US_SEL_GOOGLE_LOGIN
+    @p_email NVARCHAR(255)
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    -- Kiểm tra xem user đã tồn tại chưa theo email
+    SELECT 
+        id_tk,
+        tendangnhap,
+        CAST(vaitro AS BIT) as vaitro,
+        hoveten,
+        sodienthoai,
+        email,
+        CAST(trangthai AS BIT) as trangthai,
+        ngaytao,
+        ngaycapnhat
+    FROM TAI_KHOAN 
+    WHERE email = @p_email 
+       AND trangthai = 1;
+END
+GO
+
+--WBH_US_INS_GOOGLE_USER
+IF EXISTS (SELECT * FROM sys.procedures WHERE name = 'WBH_US_INS_GOOGLE_USER')
+BEGIN
+    DROP PROCEDURE WBH_US_INS_GOOGLE_USER;
+END
+GO
+
+CREATE PROCEDURE WBH_US_INS_GOOGLE_USER
+    @p_email NVARCHAR(255),
+    @p_hoveten NVARCHAR(255),
+    @p_vaitro BIT = 0
+AS
+BEGIN
+    SET NOCOUNT ON;
+    
+    DECLARE @new_id INT;
+    
+    -- Kiểm tra xem email đã tồn tại chưa
+    IF EXISTS (SELECT 1 FROM TAI_KHOAN WHERE email = @p_email)
+    BEGIN
+        -- Nếu đã tồn tại, trả về thông tin user hiện tại
+        SELECT 
+            id_tk,
+            tendangnhap,
+            CAST(vaitro AS BIT) as vaitro,
+            hoveten,
+            sodienthoai,
+            email,
+            CAST(trangthai AS BIT) as trangthai,
+            ngaytao,
+            ngaycapnhat
+        FROM TAI_KHOAN 
+        WHERE email = @p_email;
+        RETURN;
+    END
+    
+    -- Tạo tài khoản mới
+    INSERT INTO TAI_KHOAN (
+        tendangnhap,
+        matkhau,
+        vaitro,
+        hoveten,
+        email,
+        trangthai,
+        ngaytao,
+        ngaycapnhat
+    )
+    VALUES (
+        @p_email, -- Sử dụng email làm username
+        NULL, -- Không cần mật khẩu cho Google login
+        @p_vaitro,
+        @p_hoveten,
+        @p_email,
+        1, -- Kích hoạt ngay
+        GETDATE(),
+        GETDATE()
+    );
+    
+    SET @new_id = SCOPE_IDENTITY();
+    
+    -- Trả về thông tin user vừa tạo
+    SELECT 
+        id_tk,
+        tendangnhap,
+        CAST(vaitro AS BIT) as vaitro,
+        hoveten,
+        sodienthoai,
+        email,
+        CAST(trangthai AS BIT) as trangthai,
+        ngaytao,
+        ngaycapnhat
+    FROM TAI_KHOAN 
+    WHERE id_tk = @new_id;
+END
+GO
+
 -- WBH_US_SEL_LOGIN_USER
 CREATE PROCEDURE WBH_US_SEL_LOGIN_USER
     @p_tendangnhap NVARCHAR(255),

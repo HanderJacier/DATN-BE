@@ -1189,32 +1189,75 @@ BEGIN
     END
 END;
 GO
--- WBH_US_SEL_LICH_SU_DON_HANG
-CREATE PROCEDURE WBH_US_SEL_LICH_SU_DON_HANG
-    @p_taikhoan INT,
-    @p_pageNo INT = 1,
-    @p_pageSize INT = 10
+CREATE OR ALTER PROCEDURE WBH_US_SEL_HOA_DON_THEO_TAI_KHOAN
+     @p_id_tk    INT,
+  @p_pageNo   INT = 1,
+  @p_pageSize INT = 10
 AS
 BEGIN
-    SET NOCOUNT ON;
-    
+  SET NOCOUNT ON;
+
+  ;WITH base AS (
     SELECT 
-        hd.id_hd,
-        hd.ngaytao,
-        hd.giahoadon,
-        hd.trangthai,
-        hd.noidung,
-        tt.phuongthuc,
-        tt.magiaodich,
-        tt.ngaythanhtoan
+      hd.id_hd, hd.taikhoan, hd.ngaytao, hd.giahoadon, hd.trangthai, hd.noidung,
+      tt.phuongthuc, tt.magiaodich, tt.ngaythanhtoan
     FROM HOA_DON hd
-    LEFT JOIN THANH_TOAN tt ON hd.id_hd = tt.hoadon
-    WHERE hd.taikhoan = @p_taikhoan
-    ORDER BY hd.ngaytao DESC
-    OFFSET (@p_pageNo - 1) * @p_pageSize ROWS
-    FETCH NEXT @p_pageSize ROWS ONLY;
-END;
-GO
+    LEFT JOIN THANH_TOAN tt ON tt.hoadon = hd.id_hd
+    WHERE hd.taikhoan = @p_id_tk
+  ),
+  paged AS (
+    SELECT 
+      b.*,
+      ROW_NUMBER() OVER (ORDER BY TRY_CONVERT(date, b.ngaytao, 103) DESC, b.id_hd DESC) AS rn
+    FROM base b
+  )
+  SELECT 
+    p.id_hd, p.ngaytao, p.giahoadon, p.trangthai, p.noidung,
+    p.phuongthuc, p.magiaodich, p.ngaythanhtoan,
+    ISNULL((
+      SELECT 
+        hdct.id_hdct,
+        hdct.sanpham        AS id_sp,
+        sp.tensanpham,
+        sp.anhgoc,
+        hdct.dongia,
+        hdct.soluong,
+        (hdct.dongia * hdct.soluong) AS thanhtien
+      FROM HD_CHI_TIET hdct
+      JOIN SAN_PHAM sp ON sp.id_sp = hdct.sanpham
+      WHERE hdct.hoadon = p.id_hd
+      FOR JSON PATH
+    ), '[]') AS items
+  INTO #paged_invoices
+  FROM paged p
+  WHERE p.rn BETWEEN ((@p_pageNo - 1) * @p_pageSize + 1) AND (@p_pageNo * @p_pageSize);
+
+  -- RS#1
+  SELECT * 
+  FROM #paged_invoices
+  ORDER BY TRY_CONVERT(date, ngaytao, 103) DESC, id_hd DESC;
+
+  -- RS#2
+  SELECT 
+    pi.id_hd,
+    hdct.id_hdct,
+    hdct.sanpham AS id_sp,
+    sp.tensanpham,
+    sp.anhgoc,
+    hdct.dongia,
+    hdct.soluong,
+    (hdct.dongia * hdct.soluong) AS thanhtien
+  FROM #paged_invoices pi
+  JOIN HD_CHI_TIET hdct ON hdct.hoadon = pi.id_hd
+  JOIN SAN_PHAM sp ON sp.id_sp = hdct.sanpham
+  ORDER BY pi.id_hd, hdct.id_hdct;
+
+  -- RS#3
+  SELECT COUNT(*) AS total FROM base;
+
+  DROP TABLE #paged_invoices;
+END
+
 -- WBH_US_SEL_CHI_TIET_HOA_DON
 CREATE PROCEDURE WBH_US_SEL_CHI_TIET_HOA_DON
     @p_id_hd INT

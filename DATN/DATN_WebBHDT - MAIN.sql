@@ -2213,12 +2213,6 @@ INSERT INTO DIA_CHI (taikhoan, diachi) VALUES
 (3, N'456 Lê Lợi, TP.HCM'),
 (4, N'789 Trần Hưng Đạo, Đà Nẵng');
 
--- Thông số
-INSERT INTO SP_THONG_SO (sanpham, model, trongluong, pin, congketnoi, tinhnang, mausac, soluong) VALUES
-(1, N'Model IP15PM', N'221g', N'4500mAh', N'USB-C', N'Cấu hình mạnh mẽ', N'Titan', 5),
-(2, N'Model S24U', N'228g', N'5000mAh', N'USB-C', N'Camera 200MP', N'Đen', 10),
-(3, N'Model ROG', N'2.3kg', N'90Wh', N'USB-C + HDMI', N'Gaming cao cấp', N'Đen', 3);
-
 -- Ảnh phụ
 INSERT INTO ANH_SP (sanpham, diachianh) VALUES
 (1, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1751982356/iphone-15-pro-max_sr3kih.png'),

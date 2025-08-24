@@ -1002,6 +1002,51 @@ BEGIN
     SELECT @rtn_value AS rtn_value;
 END;
 GO
+-- WBH_US_SEL_HD_CHI_TIET_THEO_DANH_SACH
+CREATE OR ALTER PROCEDURE WBH_US_SEL_HD_CHI_TIET_THEO_DANH_SACH
+    @p_ids NVARCHAR(MAX)   -- CSV: "1,2,3"
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Nếu rỗng -> trả mảng rỗng (schema đúng cột)
+    IF @p_ids IS NULL OR LTRIM(RTRIM(@p_ids)) = ''
+    BEGIN
+        SELECT TOP (0)
+            CAST(NULL AS INT)      AS id_hd,
+            CAST(NULL AS INT)      AS id_hdct,
+            CAST(NULL AS INT)      AS id_sp,
+            CAST(NULL AS NVARCHAR(255)) AS tensanpham,
+            CAST(NULL AS NVARCHAR(255)) AS anhgoc,
+            CAST(NULL AS DECIMAL(18,2)) AS dongia,
+            CAST(NULL AS INT)      AS soluong,
+            CAST(NULL AS DECIMAL(18,2)) AS thanhtien;
+        RETURN;
+    END
+
+    -- Chuẩn hoá danh sách id hoá đơn
+    DECLARE @ids TABLE (id_hd INT PRIMARY KEY);
+    INSERT INTO @ids(id_hd)
+    SELECT DISTINCT TRY_CONVERT(INT, LTRIM(RTRIM(value)))
+    FROM STRING_SPLIT(@p_ids, ',')
+    WHERE TRY_CONVERT(INT, LTRIM(RTRIM(value))) IS NOT NULL;
+
+    -- Trả danh sách chi tiết theo các id_hd
+    SELECT
+        hdct.hoadon                                AS id_hd,
+        hdct.id_hdct                               AS id_hdct,
+        sp.id_sp                                   AS id_sp,
+        sp.tensanpham                              AS tensanpham,
+        sp.anhgoc                                  AS anhgoc,
+        CAST(hdct.dongia AS DECIMAL(18,2))         AS dongia,
+        hdct.soluong                               AS soluong,
+        CAST(hdct.dongia * hdct.soluong AS DECIMAL(18,2)) AS thanhtien
+    FROM HD_CHI_TIET hdct
+    JOIN @ids i       ON i.id_hd = hdct.hoadon
+    JOIN SAN_PHAM sp  ON sp.id_sp = hdct.sanpham
+    ORDER BY hdct.hoadon, hdct.id_hdct;
+END
+GO
 -- WBH_AD_SEL_DANH_SACH_NGUOI_DUNG
 CREATE PROCEDURE WBH_AD_SEL_DANH_SACH_NGUOI_DUNG
     @p_pageNo INT = 1,

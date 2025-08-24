@@ -65,17 +65,21 @@ GO
 /*===== TABLE =====*/
 -- TAI_KHOAN
 CREATE TABLE TAI_KHOAN(
-	id_tk INT IDENTITY(1,1) PRIMARY KEY,
-	tendangnhap NVARCHAR(255)  UNIQUE,
-	matkhau NVARCHAR(255) ,
-	vaitro BIT DEFAULT 0 ,
-	hoveten NVARCHAR(255) ,
-	sodienthoai VARCHAR(15)  UNIQUE,
-	email NVARCHAR(255)  UNIQUE,
-	trangthai BIT DEFAULT 0 , -- 1 = ACTIVE / 0 = INACTIVE
-	ngaytao NVARCHAR(255) DEFAULT FORMAT(GETDATE(), 'dd/MM/yyyy'),
-	ngaycapnhat DATE 
+    id_tk INT IDENTITY(1,1) PRIMARY KEY,
+    tendangnhap NVARCHAR(255) UNIQUE,
+    matkhau NVARCHAR(255),
+    vaitro BIT DEFAULT 0,
+    hoveten NVARCHAR(255),
+    sodienthoai VARCHAR(15) NULL,   -- ⚡ bỏ UNIQUE ở đây
+    email NVARCHAR(255) UNIQUE,
+    trangthai BIT DEFAULT 0, -- 1 = ACTIVE / 0 = INACTIVE
+    ngaytao NVARCHAR(255) DEFAULT FORMAT(GETDATE(), 'dd/MM/yyyy'),
+    ngaycapnhat DATE
 );
+GO
+CREATE UNIQUE INDEX UX_TAI_KHOAN_SDT_NOTNULL
+ON dbo.TAI_KHOAN(sodienthoai)
+WHERE sodienthoai IS NOT NULL;
 GO
 -- DIA_CHI
 CREATE TABLE DIA_CHI(
@@ -2038,6 +2042,74 @@ BEGIN
     ORDER BY dc.id_dc DESC;
 END;
 GO
+
+CREATE OR ALTER PROCEDURE dbo.WBH_US_CRT_GOOGLE_LOGIN
+    @p_email     NVARCHAR(255),
+    @p_hoveten   NVARCHAR(255) = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    DECLARE @id_tk  INT;
+    DECLARE @is_new BIT = 0;
+
+    -- Validate email sơ bộ
+    IF (@p_email IS NULL OR LTRIM(RTRIM(@p_email)) = '' OR @p_email NOT LIKE '%_@__%.__%')
+    BEGIN
+        SELECT TOP (0)
+            CAST(0 AS BIT)      AS is_new,
+            CAST(NULL AS INT)   AS id_tk,
+            CAST(NULL AS NVARCHAR(255)) AS tendangnhap,
+            CAST(NULL AS BIT)   AS vaitro,
+            CAST(NULL AS NVARCHAR(255)) AS hoveten,
+            CAST(NULL AS NVARCHAR(20))  AS sodienthoai,
+            CAST(NULL AS NVARCHAR(255)) AS email,
+            CAST(NULL AS BIT)   AS trangthai,
+            CAST(NULL AS NVARCHAR(20))  AS ngaytao,
+            CAST(NULL AS DATE)  AS ngaycapnhat;
+        RETURN;
+    END;
+
+    BEGIN TRAN;
+
+    -- Tìm tài khoản theo email
+    SELECT TOP (1) @id_tk = id_tk
+    FROM dbo.TAI_KHOAN WITH (UPDLOCK, HOLDLOCK)
+    WHERE email = @p_email;
+
+    -- Nếu chưa có thì tạo mới
+    IF @id_tk IS NULL
+    BEGIN
+        INSERT INTO dbo.TAI_KHOAN
+            (tendangnhap, matkhau, vaitro, hoveten, sodienthoai, email, trangthai, ngaytao, ngaycapnhat)
+        VALUES
+            (@p_email, NULL, 0, ISNULL(@p_hoveten, @p_email), NULL, @p_email, 1,
+             FORMAT(GETDATE(), 'dd/MM/yyyy'), GETDATE());
+
+        SET @id_tk = SCOPE_IDENTITY();
+        SET @is_new = 1;
+    END;
+
+    COMMIT TRAN;
+
+    -- Luôn trả về đúng 1 result set (nếu đã có thì chỉ select lại thôi)
+    SELECT 
+        @is_new                           AS is_new,
+        tk.id_tk,
+        tk.tendangnhap,
+        CAST(tk.vaitro AS BIT)            AS vaitro,
+        tk.hoveten,
+        tk.sodienthoai,
+        tk.email,
+        CAST(tk.trangthai AS BIT)         AS trangthai,
+        tk.ngaytao,
+        tk.ngaycapnhat
+    FROM dbo.TAI_KHOAN tk
+    WHERE tk.id_tk = @id_tk;
+END
+GO
+
 
 /*===== CHECK TRIGGER =====*/
 SELECT

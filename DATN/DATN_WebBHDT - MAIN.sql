@@ -2212,13 +2212,6 @@ INSERT INTO DIA_CHI (taikhoan, diachi) VALUES
 (3, N'456 Lê Lợi, TP.HCM'),
 (4, N'789 Trần Hưng Đạo, Đà Nẵng');
 
-/* SAN_PHAM + SP_THONG_SO + ANH_SP */
-INSERT INTO SAN_PHAM (tensanpham, dongia, loai, thuonghieu, anhgoc, loaigiam, hangiamgia, giamgia)
-VALUES
-(N'iPhone 15 Pro Max', 39000000, 1, 4, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1751982398/15promaxtitantrangtinhtemobile_81af45e9aa4e4c9a99c08275843b7220_1024x1024_rylfzx.png', 3, N'31/12/2025', 35100000),
-(N'Samsung Galaxy S24 Ultra', 28000000, 1, 6, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1751982514/xiaomi-14_2__4_jdopoz.webp', 2, N'31/12/2025', 26600000),
-(N'Asus ROG Laptop', 42000000, 3, 5, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1751718316/Huawei-Mate-60-Pro-chinh-hang_tlnvtg.jpg', 4, N'31/12/2025', 35700000);
-
 -- Thông số
 INSERT INTO SP_THONG_SO (sanpham, model, trongluong, pin, congketnoi, tinhnang, mausac, soluong) VALUES
 (1, N'Model IP15PM', N'221g', N'4500mAh', N'USB-C', N'Cấu hình mạnh mẽ', N'Titan', 5),
@@ -2271,39 +2264,39 @@ INSERT INTO YEU_THICH (sanpham, taikhoan, trangthai) VALUES
 (3, 1, 'Y');
 
 -- Điện thoại di động (loai = 1)
-EXEC WBH_AD_CRT_THEMSP N'iPhone 15 Pro', 30000000, 1, 4, NULL, N'Model A1', N'200g', N'4323mAh', N'USB-C', N'FaceID, 5G', N'Titan Xanh', 50, NULL, 1, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'Samsung Galaxy S24', 25000000, 1, 6, NULL, N'Model A2', N'210g', N'4500mAh', N'USB-C', N'AI Camera, 5G', N'Đen', 40, NULL, 2, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'Xiaomi 14 Ultra', 20000000, 1, 7, NULL, N'Model A3', N'230g', N'5000mAh', N'USB-C', N'HyperOS, Leica Camera', N'Trắng', 35, NULL, 3, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'iPhone 15 Pro', 30000000, 1, 4, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039942/iPhone-15-pro-max-titan-xanh-6_vkfpqr.jpg', N'Model A1', N'200g', N'4323mAh', N'USB-C', N'FaceID, 5G', N'Titan Xanh', 50, NULL, 1, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Samsung Galaxy S24', 25000000, 1, 6, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756038970/samsung-galaxy-s24-ultra-den_dyz5ld.jpg', N'Model A2', N'210g', N'4500mAh', N'USB-C', N'AI Camera, 5G', N'Đen', 40, NULL, 2, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Xiaomi 14 Ultra', 20000000, 1, 7, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039004/xiaomi-14-ultra_3_uygd6n.webp', N'Model A3', N'230g', N'5000mAh', N'USB-C', N'HyperOS, Leica Camera', N'Trắng', 35, NULL, 3, '30/12/2030';
 
 -- Máy tính bảng (loai = 2)
-EXEC WBH_AD_CRT_THEMSP N'iPad Pro M2', 28000000, 2, 4, NULL, N'Model B1', N'600g', N'Li-ion', N'Thunderbolt', N'FaceID, Apple Pencil', N'Xám', 25, NULL, 4, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'Samsung Galaxy Tab S9', 22000000, 2, 6, NULL, N'Model B2', N'580g', N'Li-ion', N'USB-C', N'S Pen, Dex', N'Bạc', 30, NULL, 5, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'Xiaomi Pad 6', 12000000, 2, 7, NULL, N'Model B3', N'550g', N'Li-ion', N'USB-C', N'Smart Stylus', N'Xanh dương', 20, NULL, 6, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'iPad Pro M2', 28000000, 2, 4, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039037/ipad_pro_m2_-_11_inch__colors__c4189cc924bb40b181351e979df29f64_master_a21yli.png', N'Model B1', N'600g', N'Li-ion', N'Thunderbolt', N'FaceID, Apple Pencil', N'Xám', 25, NULL, 4, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Samsung Galaxy Tab S9', 22000000, 2, 6, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039872/unnamed_tyd48g.webp', N'Model B2', N'580g', N'Li-ion', N'USB-C', N'S Pen, Dex', N'Bạc', 30, NULL, 5, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Xiaomi Pad 6', 12000000, 2, 7, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039829/xiaomi-pad-6-blue-thumb-600x600_brghih.jpg', N'Model B3', N'550g', N'Li-ion', N'USB-C', N'Smart Stylus', N'Xanh dương', 20, NULL, 6, '30/12/2030';
 
 -- Laptop (loai = 3)
-EXEC WBH_AD_CRT_THEMSP N'Lenovo ThinkPad X1', 35000000, 3, 1, NULL, N'Model C1', N'1.4kg', N'Li-ion', N'Thunderbolt, HDMI', N'Fingerprint, Camera IR', N'Đen', 15, NULL, 7, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'Dell XPS 13', 40000000, 3, 3, NULL, N'Model C2', N'1.3kg', N'Li-ion', N'USB-C, Thunderbolt', N'Touch, AI Noise Cancel', N'Bạc', 18, NULL, 8, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'Asus ROG Zephyrus', 45000000, 3, 5, NULL, N'Model C3', N'2.0kg', N'Li-ion', N'HDMI, USB-C', N'RTX 4070, RGB Keyboard', N'Đen đỏ', 10, NULL, 9, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Lenovo ThinkPad X1', 35000000, 3, 1, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039136/ThinkPad-X1-Carbon-Gen-13-CT1-05-www.laptopvip.vn-1731149987_bgl3zd.webp', N'Model C1', N'1.4kg', N'Li-ion', N'Thunderbolt, HDMI', N'Fingerprint, Camera IR', N'Đen', 15, NULL, 7, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Dell XPS 13', 40000000, 3, 3, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039163/dell-xps-13-9350-2024-1731577899_fskwm6.png', N'Model C2', N'1.3kg', N'Li-ion', N'USB-C, Thunderbolt', N'Touch, AI Noise Cancel', N'Bạc', 18, NULL, 8, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Asus ROG Zephyrus', 45000000, 3, 5, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039188/50871_rog_zephyrus_g14_23ecdf926b6a46fa887a95de8b1d409f_grande_5361640af98943f59d5b1af718d6a65a_grande_fn5soz.png', N'Model C3', N'2.0kg', N'Li-ion', N'HDMI, USB-C', N'RTX 4070, RGB Keyboard', N'Đen đỏ', 10, NULL, 9, '30/12/2030';
 
 -- Phụ kiện (loai = 4)
-EXEC WBH_AD_CRT_THEMSP N'Apple Magic Mouse', 2500000, 4, 4, NULL, N'Model D1', N'100g', N'Pin sạc', N'Bluetooth', N'Multi-Touch Surface', N'Trắng', 100, NULL, 10, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'Samsung S Pen Pro', 1500000, 4, 6, NULL, N'Model D2', N'20g', N'Pin sạc', N'Bluetooth', N'Air Actions', N'Đen', 80, NULL, 11, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'Sony DualSense Controller', 2000000, 4, 10, NULL, N'Model D3', N'280g', N'Pin sạc', N'USB-C, Bluetooth', N'Haptic Feedback, Adaptive Trigger', N'Trắng xanh', 60, NULL, 12, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Apple Magic Mouse', 2500000, 4, 4, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039281/003294PCR-EU_hpb7gi.jpg', N'Model D1', N'100g', N'Pin sạc', N'Bluetooth', N'Multi-Touch Surface', N'Trắng', 100, NULL, 10, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Samsung S Pen Pro', 1500000, 4, 6, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039309/s-pen-pro_800x450_vffklh.jpg', N'Model D2', N'20g', N'Pin sạc', N'Bluetooth', N'Air Actions', N'Đen', 80, NULL, 11, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Sony DualSense Controller', 2000000, 4, 10, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039339/dualsense-ps5-edge-wireless-controller-45-1400x1400-1_vgbqon.webp', N'Model D3', N'280g', N'Pin sạc', N'USB-C, Bluetooth', N'Haptic Feedback, Adaptive Trigger', N'Trắng xanh', 60, NULL, 12, '30/12/2030';
 
 -- Tivi (loai = 5)
-EXEC WBH_AD_CRT_THEMSP N'Samsung Neo QLED 55"', 30000000, 5, 6, NULL, N'Model E1', N'15kg', N'Điện trực tiếp', N'HDMI, WiFi', N'4K HDR, AI Upscale', N'Đen', 12, NULL, 13, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'Sony Bravia XR 65"', 35000000, 5, 10, NULL, N'Model E2', N'20kg', N'Điện trực tiếp', N'HDMI, WiFi', N'XR Cognitive Processor', N'Bạc', 10, NULL, 14, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'LG OLED evo C3 55"', 32000000, 5, 6, NULL, N'Model E3', N'16kg', N'Điện trực tiếp', N'HDMI, WiFi', N'OLED HDR, Dolby Vision', N'Đen xám', 8, NULL, 15, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Samsung Neo QLED 55"', 30000000, 5, 6, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039364/1729790062_main_smart-tivi-samsung-neo-qled-4k-55-inch-qa55qn85dbkxxv_k9xn2t.jpg', N'Model E1', N'15kg', N'Điện trực tiếp', N'HDMI, WiFi', N'4K HDR, AI Upscale', N'Đen', 12, NULL, 13, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Sony Bravia XR 65"', 35000000, 5, 10, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039397/10055293-google-tivi-oled-sony-bravia-4k-65-inch-xr-65a80l-vn3-1_prask0.webp', N'Model E2', N'20kg', N'Điện trực tiếp', N'HDMI, WiFi', N'XR Cognitive Processor', N'Bạc', 10, NULL, 14, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'LG OLED evo C3 55"', 32000000, 5, 6, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039425/TV-OLED-55-C3-A-Basic_jqpawa.jpg', N'Model E3', N'16kg', N'Điện trực tiếp', N'HDMI, WiFi', N'OLED HDR, Dolby Vision', N'Đen xám', 8, NULL, 15, '30/12/2030';
 
 -- Loa và tai nghe (loai = 6)
-EXEC WBH_AD_CRT_THEMSP N'Apple AirPods Pro 2', 6000000, 6, 4, NULL, N'Model F1', N'50g', N'Pin sạc', N'Bluetooth 5.3', N'ANC, Transparency Mode', N'Trắng', 70, NULL, 1, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'Sony WH-1000XM5', 9000000, 6, 10, NULL, N'Model F2', N'250g', N'Pin sạc', N'Bluetooth 5.2, Jack 3.5mm', N'ANC, Hi-Res Audio', N'Đen', 40, NULL, 2, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'JBL Charge 5', 5000000, 6, 6, NULL, N'Model F3', N'900g', N'Li-ion', N'Bluetooth, USB-C', N'Chống nước IP67, Bass mạnh', N'Đỏ', 30, NULL, 3, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Apple AirPods Pro 2', 6000000, 6, 4, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039454/tai-nghe-bluetooth-airpods-pro-2nd-gen-usb-c-charge-apple-thumb-1-600x600_r1wqep.jpg', N'Model F1', N'50g', N'Pin sạc', N'Bluetooth 5.3', N'ANC, Transparency Mode', N'Trắng', 70, NULL, 1, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Sony WH-1000XM5', 9000000, 6, 10, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039782/6145c1d32e6ac8e63a46c912dc33c5bb_eceg8c.avif', N'Model F2', N'250g', N'Pin sạc', N'Bluetooth 5.2, Jack 3.5mm', N'ANC, Hi-Res Audio', N'Đen', 40, NULL, 2, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'JBL Charge 5', 5000000, 6, 6, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039749/jbl-charge-5-19-294_rgoqt2.png', N'Model F3', N'900g', N'Li-ion', N'Bluetooth, USB-C', N'Chống nước IP67, Bass mạnh', N'Đỏ', 30, NULL, 3, '30/12/2030';
 
 -- Đồng hồ thông minh (loai = 7)
-EXEC WBH_AD_CRT_THEMSP N'Apple Watch Series 9', 12000000, 7, 4, NULL, N'Model G1', N'40g', N'Pin sạc', N'Bluetooth, WiFi', N'SpO2, ECG, Always-on Display', N'Hồng', 25, NULL, 4, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'Samsung Galaxy Watch 6', 10000000, 7, 6, NULL, N'Model G2', N'45g', N'Pin sạc', N'Bluetooth, LTE', N'SpO2, ECG, BiaSense', N'Đen bạc', 30, NULL, 5, '30/12/2030';
-EXEC WBH_AD_CRT_THEMSP N'Xiaomi Watch S2', 5000000, 7, 7, NULL, N'Model G3', N'42g', N'Pin sạc', N'Bluetooth', N'SpO2, 117 chế độ luyện tập', N'Xanh lá', 20, NULL, 6, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Apple Watch Series 9', 12000000, 7, 4, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039652/apple-watch-series-9-pink00000-jpeg-c139e598-3080-4750-bbdf-fa712b3e3bb4_a7aebe.webp', N'Model G1', N'40g', N'Pin sạc', N'Bluetooth, WiFi', N'SpO2, ECG, Always-on Display', N'Hồng', 25, NULL, 4, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Samsung Galaxy Watch 6', 10000000, 7, 6, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039681/1_191_4_2_2_1_1_1_2_1_1_u5hlh5.png', N'Model G2', N'45g', N'Pin sạc', N'Bluetooth, LTE', N'SpO2, ECG, BiaSense', N'Đen bạc', 30, NULL, 5, '30/12/2030';
+EXEC WBH_AD_CRT_THEMSP N'Xiaomi Watch S2', 5000000, 7, 7, N'https://res.cloudinary.com/dkztehmmk/image/upload/v1756039718/xiaomi-watch-s2_xoggkq.jpg', N'Model G3', N'42g', N'Pin sạc', N'Bluetooth', N'SpO2, 117 chế độ luyện tập', N'Xanh lá', 20, NULL, 6, '30/12/2030';
 
 -- Tài khoản 1 yêu thích sản phẩm 1,2,3,...
 EXEC WBH_US_UPD_CAPNHAT_YT_SP 1, 1;

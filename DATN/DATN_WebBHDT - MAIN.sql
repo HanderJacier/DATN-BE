@@ -176,6 +176,7 @@ GO
 CREATE TABLE GIO_HANG(
 	id_gh INT IDENTITY(1,1)  PRIMARY KEY,
 	sanpham INT ,
+    soluong INT DEFAULT 0 CHECK (soluong>= 0) ,
 	taikhoan INT ,
 );
 GO

@@ -937,40 +937,90 @@ BEGIN
     WHERE id_tk = @p_id_tk;
 END;
 GO
--- WBH_US_UPD_THONG_TIN_TAI_KHOAN
-CREATE PROCEDURE WBH_US_UPD_THONG_TIN_TAI_KHOAN
-    @p_id_tk INT,
-    @p_hoveten NVARCHAR(255),
-    @p_sodienthoai VARCHAR(15),
-    @p_email NVARCHAR(255)
+--WBH_US_UPD_THONG_TIN_TAI_KHOAN
+CREATE OR ALTER PROCEDURE WBH_US_UPD_THONG_TIN_TAI_KHOAN
+    @p_id_tk        INT,
+    @p_hoveten      NVARCHAR(255),
+    @p_sodienthoai  VARCHAR(15),
+    @p_email        NVARCHAR(255)
 AS
 BEGIN
     SET NOCOUNT ON;
-    
-    DECLARE @rtn_value INT;
-    
-    -- Validate email và số điện thoại không trùng với tài khoản khác
-    IF EXISTS (SELECT 1 FROM TAI_KHOAN WHERE sodienthoai = @p_sodienthoai AND id_tk != @p_id_tk)
-        SET @rtn_value = -1; -- Số điện thoại đã tồn tại
-    ELSE IF EXISTS (SELECT 1 FROM TAI_KHOAN WHERE email = @p_email AND id_tk != @p_id_tk)
-        SET @rtn_value = -2; -- Email đã tồn tại
-    ELSE IF @p_email NOT LIKE '%_@__%.__%'
-        SET @rtn_value = -3; -- Email không hợp lệ
-    ELSE IF @p_sodienthoai NOT LIKE '[0-9][0-9][0-9]%' OR LEN(@p_sodienthoai) NOT IN (10, 11)
-        SET @rtn_value = -4; -- Số điện thoại không hợp lệ
-    ELSE
-    BEGIN
+
+    -- ✅ Bảo kê trigger dùng FORMAT(GETDATE(),'dd/MM/yyyy') -> DATE
+    -- Trigger chạy trong cùng session nên kế thừa DATEFORMAT này
+    SET DATEFORMAT dmy;
+    -- (tuỳ chọn) SET LANGUAGE Vietnamese;
+
+    DECLARE @rtn_value INT = 0;
+    DECLARE @message   NVARCHAR(255) = N'';
+
+    BEGIN TRY
+        -- Chuẩn hoá input
+        SET @p_sodienthoai = NULLIF(LTRIM(RTRIM(@p_sodienthoai)), '');
+
+        -- 0) Tài khoản tồn tại?
+        IF NOT EXISTS (SELECT 1 FROM TAI_KHOAN WHERE id_tk = @p_id_tk)
+        BEGIN
+            SET @rtn_value = -10; 
+            SET @message   = N'Tài khoản không tồn tại';
+            SELECT @rtn_value AS rtn_value, @message AS message;
+            RETURN;
+        END
+
+        -- 1) Email hợp lệ?
+        IF (@p_email IS NULL OR LTRIM(RTRIM(@p_email)) = '' OR @p_email NOT LIKE '%_@__%.__%')
+        BEGIN
+            SET @rtn_value = -3; 
+            SET @message   = N'Email không hợp lệ';
+            SELECT @rtn_value AS rtn_value, @message AS message;
+            RETURN;
+        END
+
+        -- 2) SĐT hợp lệ? (cho phép NULL/empty)
+        IF (@p_sodienthoai IS NOT NULL) 
+           AND ( @p_sodienthoai NOT LIKE '[0-9][0-9][0-9]%' OR LEN(@p_sodienthoai) NOT IN (10, 11) )
+        BEGIN
+            SET @rtn_value = -4; 
+            SET @message   = N'Số điện thoại không hợp lệ';
+            SELECT @rtn_value AS rtn_value, @message AS message;
+            RETURN;
+        END
+
+        -- 3) Trùng email/sđt với tài khoản khác?
+        IF EXISTS (SELECT 1 FROM TAI_KHOAN WHERE email = @p_email AND id_tk <> @p_id_tk)
+        BEGIN
+            SET @rtn_value = -2; 
+            SET @message   = N'Email đã tồn tại';
+            SELECT @rtn_value AS rtn_value, @message AS message;
+            RETURN;
+        END
+
+        IF (@p_sodienthoai IS NOT NULL)
+           AND EXISTS (SELECT 1 FROM TAI_KHOAN WHERE sodienthoai = @p_sodienthoai AND id_tk <> @p_id_tk)
+        BEGIN
+            SET @rtn_value = -1; 
+            SET @message   = N'Số điện thoại đã tồn tại';
+            SELECT @rtn_value AS rtn_value, @message AS message;
+            RETURN;
+        END
+
+        -- 4) Update (trigger sẽ tự cập nhật ngaycapnhat)
         UPDATE TAI_KHOAN
-        SET hoveten = @p_hoveten,
-            sodienthoai = @p_sodienthoai,
-            email = @p_email
+        SET hoveten     = @p_hoveten,
+            sodienthoai = @p_sodienthoai,  -- có thể NULL
+            email       = @p_email
         WHERE id_tk = @p_id_tk;
-        
-        SET @rtn_value = 0; -- Thành công
-    END
-    
-    SELECT @rtn_value AS rtn_value;
-END;
+
+        SET @rtn_value = 0;
+        SET @message   = N'Cập nhật thành công';
+
+        SELECT @rtn_value AS rtn_value, @message AS message;
+    END TRY
+    BEGIN CATCH
+        SELECT ERROR_NUMBER() AS rtn_value, ERROR_MESSAGE() AS message;
+    END CATCH
+END
 GO
 -- WBH_US_UPD_DOI_MAT_KHAU
 CREATE PROCEDURE WBH_US_UPD_DOI_MAT_KHAU

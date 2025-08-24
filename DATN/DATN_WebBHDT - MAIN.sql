@@ -1867,17 +1867,27 @@ CREATE PROCEDURE WBH_AD_SEL_BAO_CAO_DOANH_THU
 AS
 BEGIN
     SET NOCOUNT ON;
-    
+
+    -- Ép kiểu NVARCHAR -> DATE theo format dd/MM/yyyy (style 103)
+    DECLARE @fromDate DATE = TRY_CONVERT(DATE, @p_tu_ngay, 103);
+    DECLARE @toDate   DATE = TRY_CONVERT(DATE, @p_den_ngay, 103);
+
+    -- Nếu tham số không convert được -> báo lỗi
+    IF @fromDate IS NULL OR @toDate IS NULL
+    BEGIN
+        SELECT N'Lỗi định dạng, yêu cầu dd/MM/yyyy'
+        RETURN;
+    END
+
     SELECT 
-        CONVERT(DATE, hd.ngaytao) AS ngay,
+        FORMAT(TRY_CONVERT(DATE, hd.ngaytao, 103), 'dd/MM/yyyy') AS ngay,
         COUNT(*) AS so_don_hang,
-        SUM(hd.giahoadon) AS tong_doanh_thu,
-        AVG(hd.giahoadon) AS don_hang_trung_binh
+        SUM(hd.giahoadon) AS tong_doanh_thu
     FROM HOA_DON hd
     WHERE hd.trangthai = N'Đã thanh toán'
-      AND hd.ngaytao >= @p_tu_ngay
-      AND hd.ngaytao <= @p_den_ngay
-    GROUP BY CONVERT(DATE, hd.ngaytao)
+      AND TRY_CONVERT(DATE, hd.ngaytao, 103) >= @fromDate
+      AND TRY_CONVERT(DATE, hd.ngaytao, 103) <= @toDate
+    GROUP BY FORMAT(TRY_CONVERT(DATE, hd.ngaytao, 103), 'dd/MM/yyyy')
     ORDER BY ngay DESC;
 END;
 GO

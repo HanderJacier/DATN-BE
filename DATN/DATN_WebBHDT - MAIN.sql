@@ -2222,8 +2222,8 @@ INSERT INTO ANH_SP (sanpham, diachianh) VALUES
 /* HOA_DON */
 INSERT INTO HOA_DON (taikhoan, giahoadon, trangthai, noidung)
 VALUES
-(2, 39000000, N'Chờ thanh toán', N'Mua iPhone 15 Pro Max'),
-(3, 28000000, N'Đã thanh toán', N'Mua Samsung Galaxy S24 Ultra');
+(2, 39000000, N'Chờ xử lý', N'Mua iPhone 15 Pro Max'),
+(3, 28000000, N'Đã xử lý', N'Mua Samsung Galaxy S24 Ultra');
 
 /* HD_CHI_TIET */
 INSERT INTO HD_CHI_TIET (hoadon, sanpham, dongia, soluong)

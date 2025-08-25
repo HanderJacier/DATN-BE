@@ -256,12 +256,12 @@ ON TAI_KHOAN
 AFTER UPDATE
 AS
 BEGIN
-    SET NOCOUNT ON
+    SET NOCOUNT ON;
 
-    UPDATE TAI_KHOAN
-    SET ngaycapnhat = FORMAT(GETDATE(), 'dd/MM/yyyy')
-    FROM TAI_KHOAN
-    INNER JOIN inserted i ON TAI_KHOAN.id_tk = i.id_tk;
+    UPDATE tk
+    SET tk.ngaycapnhat = FORMAT(GETDATE(), 'dd/MM/yyyy')
+    FROM TAI_KHOAN tk
+    INNER JOIN inserted i ON tk.id_tk = i.id_tk;
 END;
 GO
 --trg_auto_giagiam_sanpham

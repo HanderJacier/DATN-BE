@@ -241,11 +241,11 @@ SELECT
     A.ds_anh_phu
 FROM 
     SAN_PHAM SP
-    JOIN SP_LOAI L ON SP.loai = L.id_l
-    JOIN SP_THUONG_HIEU TH ON SP.thuonghieu = TH.id_th
-    JOIN GIAM_GIA GG ON SP.loaigiam = GG.id_gg
-    JOIN SP_THONG_SO TS ON SP.id_sp = TS.sanpham
-    JOIN (
+    LEFT JOIN SP_LOAI L ON SP.loai = L.id_l
+    LEFT JOIN SP_THUONG_HIEU TH ON SP.thuonghieu = TH.id_th
+    LEFT JOIN GIAM_GIA GG ON SP.loaigiam = GG.id_gg
+    LEFT JOIN SP_THONG_SO TS ON SP.id_sp = TS.sanpham
+    LEFT JOIN (
         SELECT sanpham, STRING_AGG(diachianh, ',') AS ds_anh_phu
         FROM ANH_SP
         GROUP BY sanpham
@@ -390,30 +390,23 @@ BEGIN
   END CATCH
 END;
 GO
---WBH_AD_UPD_TRANGTHAI_SP
+-- WBH_AD_UPD_TRANGTHAI_SP
 CREATE OR ALTER PROCEDURE WBH_AD_UPD_TRANGTHAI_SP
   @p_id_sp INT,
   @p_trangthai CHAR(1)  -- 'Y' hoặc 'N'
 AS
 BEGIN
   SET NOCOUNT ON;
-  UPDATE SAN_PHAM SET trangthai = @p_trangthai WHERE id_sp = @p_id_sp;
-  SELECT @@ROWCOUNT AS affected_rows, @p_id_sp AS id_sp, @p_trangthai AS trangthai;
-END;
-GO
--- WBH_US_SEL_DETAIL_SP
-CREATE PROCEDURE WBH_US_SEL_DETAIL_SP
-    @p_id_sp INT 
-AS
-BEGIN
-    SET NOCOUNT ON;
 
-    SELECT 
-        *
-    FROM 
-        vw_SanPham_ChiTiet
-    WHERE 
-        id_sp = @p_id_sp and trangthai = 'Y';
+  UPDATE SAN_PHAM 
+  SET trangthai = @p_trangthai 
+  WHERE id_sp = @p_id_sp;
+
+  -- ✅ Trả dữ liệu ra ngoài thẳng, không bị bọc fields
+  SELECT 
+      CAST(@@ROWCOUNT AS INT) AS affected_rows,
+      @p_id_sp AS id_sp,
+      @p_trangthai AS trangthai;
 END;
 GO
 -- WBH_US_SEL_XEMSP

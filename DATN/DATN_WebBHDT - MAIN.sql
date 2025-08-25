@@ -97,6 +97,7 @@ CREATE TABLE SAN_PHAM(
 	thuonghieu INT,
 	anhgoc NVARCHAR(255),
 	ngaytao NVARCHAR(255) DEFAULT FORMAT(GETDATE(), 'dd/MM/yyyy'),
+    trangthai VARCHAR(1) DEFAULT 'Y',
     -- Giảm giá
 	loaigiam INT,
 	giamgia DECIMAL(18) DEFAULT 0 CHECK (giamgia >= 0),
@@ -224,6 +225,7 @@ SELECT
     SP.loaigiam,
     GG.loaigiamTen,
     SP.giamgia,
+    SP.trangthai,
 
     -- Thông số kỹ thuật
     TS.id_ts,
@@ -336,7 +338,7 @@ BEGIN
     FROM 
         vw_SanPham_ChiTiet
     WHERE 
-        id_sp = @p_id_sp;
+        id_sp = @p_id_sp and trangthai = 'Y';
 END;
 GO
 -- WBH_US_SEL_XEMSP
@@ -349,6 +351,8 @@ BEGIN
         *
     FROM 
         vw_SanPham_ChiTiet
+    WHERE 
+        trangthai = 'Y'
 END;
 GO
 -- WBH_US_SEL_NGAYTAOSP
@@ -359,6 +363,7 @@ BEGIN
 
     SELECT TOP 10 * 
     FROM vw_SanPham_ChiTiet
+    WHERE trangthai = 'Y'
     ORDER BY TRY_CONVERT(date, ngaytao, 103) DESC;
 END;
 GO
@@ -402,6 +407,7 @@ BEGIN
             giamgia,
             soluong
         FROM vw_SanPham_ChiTiet
+        WHERE trangthai = 'Y'
         GROUP BY 
             id_sp,
             tensanpham,
@@ -417,7 +423,7 @@ BEGIN
             loaigiamTen,
             giamgia,
             soluong
-    ) SP
+    ) SP 
     LEFT JOIN (
         SELECT sanpham, COUNT(*) AS SoYeuThich
         FROM YEU_THICH
@@ -435,7 +441,8 @@ BEGIN
     SELECT TOP 10 *
     FROM vw_SanPham_ChiTiet
     WHERE TRY_CONVERT(date, hangiamgia, 103) >= CAST(GETDATE() AS date)
-          AND TRY_CONVERT(date, hangiamgia, 103) IS NOT NULL;
+          AND TRY_CONVERT(date, hangiamgia, 103) IS NOT NULL
+          AND trangthai = 'Y';
 END;
 GO
 -- WBH_AD_UPD_SUASP
@@ -454,6 +461,7 @@ CREATE PROCEDURE WBH_AD_UPD_SUASP
     @p_mausac NVARCHAR(255),
     @p_soluong INT,
     @p_anhphu NVARCHAR(255),
+    @p_trangthai VARCHAR(1),
     @p_id_gg INT,
     @p_hangiamgia NVARCHAR(255)
 AS
@@ -470,7 +478,8 @@ BEGIN
             thuonghieu = @p_thuonghieu,
             anhgoc = @p_anhgoc,
             loaigiam = @p_id_gg,
-            hangiamgia = @p_hangiamgia
+            hangiamgia = @p_hangiamgia,
+            trangthai = @p_trangthai
         WHERE id_sp = @p_id_sp;
 
         -- Cập nhật bảng SP_THONG_SO
@@ -504,7 +513,7 @@ BEGIN
 END;
 GO
 -- WBH_US_SEL_SANPHAM_BY_SANPHAM_DETAIL
-CREATE OR ALTER PROCEDURE WBH_US_SEL_SANPHAM_BY_SANPHAM_DETAIL
+CREATE PROCEDURE WBH_US_SEL_SANPHAM_BY_SANPHAM_DETAIL
     @p_id_sp INT
 AS
 BEGIN
@@ -518,14 +527,14 @@ BEGIN
         @v_thuonghieu = thuonghieu,
         @v_loai       = loai
     FROM SAN_PHAM
-    WHERE id_sp = @p_id_sp;
+    WHERE id_sp = @p_id_sp and trangthai = 'Y';
 
     -- Nếu không tìm thấy id_sp nguồn => trả ngẫu nhiên 4 sp khác nhau
     IF @v_loai IS NULL
     BEGIN
         SELECT TOP (5) *
         FROM vw_SanPham_ChiTiet
-        WHERE id_sp <> @p_id_sp
+        WHERE id_sp <> @p_id_sp and trangthai = 'Y'
         ORDER BY NEWID();
         RETURN;
     END

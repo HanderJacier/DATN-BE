@@ -357,7 +357,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT * 
+    SELECT TOP 10 * 
     FROM vw_SanPham_ChiTiet
     ORDER BY TRY_CONVERT(date, ngaytao, 103) DESC;
 END;
@@ -368,7 +368,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT 
+    SELECT TOP 10
         SP.id_sp,
         SP.tensanpham,
         SP.dongia,
@@ -432,7 +432,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT *
+    SELECT TOP 10 *
     FROM vw_SanPham_ChiTiet
     WHERE TRY_CONVERT(date, hangiamgia, 103) >= CAST(GETDATE() AS date)
           AND TRY_CONVERT(date, hangiamgia, 103) IS NOT NULL;
@@ -523,7 +523,7 @@ BEGIN
     -- Nếu không tìm thấy id_sp nguồn => trả ngẫu nhiên 4 sp khác nhau
     IF @v_loai IS NULL
     BEGIN
-        SELECT TOP (4) *
+        SELECT TOP (5) *
         FROM vw_SanPham_ChiTiet
         WHERE id_sp <> @p_id_sp
         ORDER BY NEWID();
@@ -2119,14 +2119,9 @@ BEGIN
     SELECT
         dc.id_dc,
         dc.taikhoan,
-        tk.hoveten,
-        tk.sodienthoai,
-        tk.email,
         dc.diachi
     FROM DIA_CHI dc
-    JOIN TAI_KHOAN tk ON tk.id_tk = dc.taikhoan
     WHERE dc.taikhoan = @p_taikhoan
-    ORDER BY dc.id_dc DESC;
 END;
 GO
 

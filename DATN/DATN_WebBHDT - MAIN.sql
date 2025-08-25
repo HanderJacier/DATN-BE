@@ -283,47 +283,122 @@ END;
 GO
 /*===== PROC =====*/
 /*-- SAN_PHAM --*/
--- WBH_AD_CRT_THEMSP
-CREATE PROCEDURE WBH_AD_CRT_THEMSP
-    @p_tensanpham NVARCHAR(255),
-    @p_dongia DECIMAL(18),
-    @p_loai INT,
-    @p_thuonghieu INT,
-    @p_anhgoc NVARCHAR(255),
-    @p_model NVARCHAR(255),
-    @p_trongluong NVARCHAR(255),
-    @p_pin NVARCHAR(255),
-    @p_congketnoi NVARCHAR(255),
-    @p_tinhnang NVARCHAR(255),
-    @p_mausac NVARCHAR(255),
-    @p_soluong INT,
-    @p_anhphu NVARCHAR(255),
-    @p_id_gg INT,
-    @p_hangiamgia NVARCHAR(255)
+--WBH_AD_CRT_THEMSP
+CREATE OR ALTER PROCEDURE WBH_AD_CRT_THEMSP
+  @p_tensanpham NVARCHAR(255),
+  @p_dongia DECIMAL(18),
+  @p_loai INT,
+  @p_thuonghieu INT,
+  @p_anhgoc NVARCHAR(255),
+  @p_model NVARCHAR(255),
+  @p_trongluong NVARCHAR(255),
+  @p_pin NVARCHAR(255),
+  @p_congketnoi NVARCHAR(255),
+  @p_tinhnang NVARCHAR(255),
+  @p_mausac NVARCHAR(255),
+  @p_soluong INT,
+  @p_anhphu NVARCHAR(255),
+  @p_id_gg INT,
+  @p_hangiamgia NVARCHAR(255)
 AS
 BEGIN
-    SET NOCOUNT ON;
-    BEGIN TRY
-        BEGIN TRAN;
-        INSERT INTO SAN_PHAM (tensanpham, dongia, loai, thuonghieu, anhgoc, loaigiam, hangiamgia)
-        VALUES (@p_tensanpham, @p_dongia, @p_loai, @p_thuonghieu, @p_anhgoc, @p_id_gg, @p_hangiamgia);
-        DECLARE @NewProductID INT = SCOPE_IDENTITY();
-        INSERT INTO SP_THONG_SO (
-            sanpham, model, trongluong, pin, congketnoi, tinhnang, mausac, soluong
-        )
-        VALUES (
-            @NewProductID, @p_model, @p_trongluong, @p_pin, @p_congketnoi, @p_tinhnang,@p_mausac, @p_soluong
-        );
-        INSERT INTO ANH_SP (sanpham, diachianh)
-        VALUES (@NewProductID, @p_anhphu);
-        SELECT 
-            'SUCCESS' AS status
-        COMMIT TRAN;
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0 ROLLBACK TRAN;
-        THROW;
-    END CATCH
+  SET NOCOUNT ON;
+  BEGIN TRY
+    BEGIN TRAN;
+
+    -- KHÔNG set trangthai, để mặc định của bảng (Y)
+    INSERT INTO SAN_PHAM (tensanpham, dongia, loai, thuonghieu, anhgoc, loaigiam, hangiamgia)
+    VALUES (@p_tensanpham, @p_dongia, @p_loai, @p_thuonghieu, @p_anhgoc, @p_id_gg, @p_hangiamgia);
+
+    DECLARE @NewProductID INT = SCOPE_IDENTITY();
+
+    INSERT INTO SP_THONG_SO (sanpham, model, trongluong, pin, congketnoi, tinhnang, mausac, soluong)
+    VALUES (@NewProductID, @p_model, @p_trongluong, @p_pin, @p_congketnoi, @p_tinhnang, @p_mausac, @p_soluong);
+
+    IF (@p_anhphu IS NOT NULL AND LTRIM(RTRIM(@p_anhphu)) <> '')
+      INSERT INTO ANH_SP (sanpham, diachianh) VALUES (@NewProductID, @p_anhphu);
+
+    COMMIT TRAN;
+    SELECT 'SUCCESS' AS status, @NewProductID AS id_sp;
+  END TRY
+  BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK TRAN;
+    SELECT 'FAIL' AS status, ERROR_NUMBER() AS error_number, ERROR_MESSAGE() AS error_message, ERROR_LINE() AS error_line;
+  END CATCH
+END;
+GO
+--WBH_AD_UPD_SUASP
+CREATE OR ALTER PROCEDURE WBH_AD_UPD_SUASP
+  @p_id_sp INT,
+  @p_tensanpham NVARCHAR(255),
+  @p_dongia DECIMAL(18),
+  @p_loai INT,
+  @p_thuonghieu INT,
+  @p_anhgoc NVARCHAR(255),
+  @p_model NVARCHAR(255),
+  @p_trongluong NVARCHAR(255),
+  @p_pin NVARCHAR(255),
+  @p_congketnoi NVARCHAR(255),
+  @p_tinhnang NVARCHAR(255),
+  @p_mausac NVARCHAR(255),
+  @p_soluong INT,
+  @p_anhphu NVARCHAR(255),
+  @p_id_gg INT,
+  @p_hangiamgia NVARCHAR(255)
+AS
+BEGIN
+  SET NOCOUNT ON;
+  BEGIN TRY
+    BEGIN TRAN;
+
+    -- KHÔNG cập nhật cột trangthai
+    UPDATE SAN_PHAM
+      SET tensanpham = @p_tensanpham,
+          dongia     = @p_dongia,
+          loai       = @p_loai,
+          thuonghieu = @p_thuonghieu,
+          anhgoc     = @p_anhgoc,
+          loaigiam   = @p_id_gg,
+          hangiamgia = @p_hangiamgia
+    WHERE id_sp = @p_id_sp;
+
+    UPDATE SP_THONG_SO
+      SET model       = @p_model,
+          trongluong  = @p_trongluong,
+          pin         = @p_pin,
+          congketnoi  = @p_congketnoi,
+          tinhnang    = @p_tinhnang,
+          mausac      = @p_mausac,
+          soluong     = @p_soluong
+    WHERE sanpham = @p_id_sp;
+
+    IF (@p_anhphu IS NOT NULL AND LTRIM(RTRIM(@p_anhphu)) <> '')
+    BEGIN
+      -- nếu có nhiều ảnh phụ sau này, có thể đổi sang UPSERT/INSERT nhiều dòng
+      IF EXISTS (SELECT 1 FROM ANH_SP WHERE sanpham = @p_id_sp)
+        UPDATE ANH_SP SET diachianh = @p_anhphu WHERE sanpham = @p_id_sp;
+      ELSE
+        INSERT INTO ANH_SP (sanpham, diachianh) VALUES (@p_id_sp, @p_anhphu);
+    END
+
+    COMMIT TRAN;
+    SELECT 'SUCCESS' AS status, @p_id_sp AS id_sp;
+  END TRY
+  BEGIN CATCH
+    IF @@TRANCOUNT > 0 ROLLBACK TRAN;
+    SELECT 'FAIL' AS status, ERROR_NUMBER() AS error_number, ERROR_MESSAGE() AS error_message, ERROR_LINE() AS error_line;
+  END CATCH
+END;
+GO
+--WBH_AD_UPD_TRANGTHAI_SP
+CREATE OR ALTER PROCEDURE WBH_AD_UPD_TRANGTHAI_SP
+  @p_id_sp INT,
+  @p_trangthai CHAR(1)  -- 'Y' hoặc 'N'
+AS
+BEGIN
+  SET NOCOUNT ON;
+  UPDATE SAN_PHAM SET trangthai = @p_trangthai WHERE id_sp = @p_id_sp;
+  SELECT @@ROWCOUNT AS affected_rows, @p_id_sp AS id_sp, @p_trangthai AS trangthai;
 END;
 GO
 -- WBH_US_SEL_DETAIL_SP
@@ -339,42 +414,6 @@ BEGIN
         vw_SanPham_ChiTiet
     WHERE 
         id_sp = @p_id_sp and trangthai = 'Y';
-END;
-GO
--- WBH_AD_DEL_XOASP
-CREATE PROCEDURE WBH_AD_DEL_XOASP
-    @p_id_sp INT
-AS
-BEGIN
-    SET NOCOUNT ON;
-    BEGIN TRY
-        -- Chỉ chuyển trạng thái sản phẩm thành 'N'
-        UPDATE SAN_PHAM
-        SET trangthai = 'N'
-        WHERE id_sp = @p_id_sp;
-
-        IF @@ROWCOUNT > 0
-        BEGIN
-            SELECT 
-                'SUCCESS' AS status,
-                @p_id_sp AS id_sp,
-                N'Đã chuyển trạng thái sản phẩm sang N (ngừng bán)' AS message;
-        END
-        ELSE
-        BEGIN
-            SELECT 
-                'FAIL' AS status,
-                @p_id_sp AS id_sp,
-                N'Không tìm thấy sản phẩm để xóa' AS message;
-        END
-    END TRY
-    BEGIN CATCH
-        SELECT 
-            'ERROR' AS status,
-            ERROR_NUMBER() AS error_number,
-            ERROR_MESSAGE() AS error_message,
-            ERROR_LINE() AS error_line;
-    END CATCH
 END;
 GO
 -- WBH_US_SEL_XEMSP
@@ -480,73 +519,6 @@ BEGIN
           AND TRY_CONVERT(date, hangiamgia, 103) IS NOT NULL
           AND trangthai = 'Y'
           AND soluong > 0 ;
-END;
-GO
--- WBH_AD_UPD_SUASP
-CREATE PROCEDURE WBH_AD_UPD_SUASP
-    @p_id_sp INT,
-    @p_tensanpham NVARCHAR(255),
-    @p_dongia DECIMAL(18),
-    @p_loai INT,
-    @p_thuonghieu INT,
-    @p_anhgoc NVARCHAR(255),
-    @p_model NVARCHAR(255),
-    @p_trongluong NVARCHAR(255),
-    @p_pin NVARCHAR(255),
-    @p_congketnoi NVARCHAR(255),
-    @p_tinhnang NVARCHAR(255),
-    @p_mausac NVARCHAR(255),
-    @p_soluong INT,
-    @p_anhphu NVARCHAR(255),
-    @p_trangthai VARCHAR(1),
-    @p_id_gg INT,
-    @p_hangiamgia NVARCHAR(255)
-AS
-BEGIN
-    SET NOCOUNT ON;
-    BEGIN TRY
-        BEGIN TRAN;
-
-        -- Cập nhật bảng SAN_PHAM
-        UPDATE SAN_PHAM
-        SET tensanpham = @p_tensanpham,
-            dongia = @p_dongia,
-            loai = @p_loai,
-            thuonghieu = @p_thuonghieu,
-            anhgoc = @p_anhgoc,
-            loaigiam = @p_id_gg,
-            hangiamgia = @p_hangiamgia,
-            trangthai = @p_trangthai
-        WHERE id_sp = @p_id_sp;
-
-        -- Cập nhật bảng SP_THONG_SO
-        UPDATE SP_THONG_SO
-        SET model = @p_model,
-            trongluong = @p_trongluong,
-            pin = @p_pin,
-            congketnoi = @p_congketnoi,
-            tinhnang = @p_tinhnang,
-            mausac = @p_mausac,
-            soluong = @p_soluong
-        WHERE sanpham = @p_id_sp;
-
-        -- Cập nhật bảng ANH_SP
-        UPDATE ANH_SP
-        SET diachianh = @p_anhphu
-        WHERE sanpham = @p_id_sp;
-        COMMIT TRAN;
-        SELECT 
-            'SUCCESS' AS status
-    END TRY
-    BEGIN CATCH
-        IF @@TRANCOUNT > 0 ROLLBACK TRAN;
-
-        SELECT 
-            'FAIL' AS status,
-            ERROR_NUMBER() AS error_number,
-            ERROR_MESSAGE() AS error_message,
-            ERROR_LINE() AS error_line;
-    END CATCH
 END;
 GO
 -- WBH_US_SEL_SANPHAM_BY_SANPHAM_DETAIL
@@ -2303,7 +2275,7 @@ INSERT INTO SP_THUONG_HIEU (thuonghieuTen) VALUES
 (N'SAMSUNG'),
 (N'XIAOMI'),
 (N'VIVO'),
-(N'OPPPO'),
+(N'OPPO'),
 (N'SONY');
 GO
 

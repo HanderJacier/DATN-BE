@@ -351,8 +351,6 @@ BEGIN
         *
     FROM 
         vw_SanPham_ChiTiet
-    WHERE 
-        trangthai = 'Y'
 END;
 GO
 -- WBH_US_SEL_NGAYTAOSP

@@ -341,6 +341,42 @@ BEGIN
         id_sp = @p_id_sp and trangthai = 'Y';
 END;
 GO
+-- WBH_AD_DEL_XOASP
+CREATE PROCEDURE WBH_AD_DEL_XOASP
+    @p_id_sp INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    BEGIN TRY
+        -- Chỉ chuyển trạng thái sản phẩm thành 'N'
+        UPDATE SAN_PHAM
+        SET trangthai = 'N'
+        WHERE id_sp = @p_id_sp;
+
+        IF @@ROWCOUNT > 0
+        BEGIN
+            SELECT 
+                'SUCCESS' AS status,
+                @p_id_sp AS id_sp,
+                N'Đã chuyển trạng thái sản phẩm sang N (ngừng bán)' AS message;
+        END
+        ELSE
+        BEGIN
+            SELECT 
+                'FAIL' AS status,
+                @p_id_sp AS id_sp,
+                N'Không tìm thấy sản phẩm để xóa' AS message;
+        END
+    END TRY
+    BEGIN CATCH
+        SELECT 
+            'ERROR' AS status,
+            ERROR_NUMBER() AS error_number,
+            ERROR_MESSAGE() AS error_message,
+            ERROR_LINE() AS error_line;
+    END CATCH
+END;
+GO
 -- WBH_US_SEL_XEMSP
 CREATE PROCEDURE WBH_US_SEL_XEMSP
 AS
@@ -442,8 +478,8 @@ BEGIN
     FROM vw_SanPham_ChiTiet
     WHERE TRY_CONVERT(date, hangiamgia, 103) >= CAST(GETDATE() AS date)
           AND TRY_CONVERT(date, hangiamgia, 103) IS NOT NULL
-          AND trangthai = 'Y';
-          AND soluong > 0 
+          AND trangthai = 'Y'
+          AND soluong > 0 ;
 END;
 GO
 -- WBH_AD_UPD_SUASP

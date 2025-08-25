@@ -1910,9 +1910,10 @@ BEGIN
 END;
 GO
 -- WBH_US_CRT_HOA_DON_DIEN_TU
+
 CREATE OR ALTER PROCEDURE WBH_US_CRT_HOA_DON_DIEN_TU
-    @p_id_hd INT,
-    @p_id_hoa_don INT,
+    @p_id_hd INT, -- id hóa đơn gốc
+    @p_id_hoa_don NVARCHAR(50), -- mã hóa đơn điện tử (transactionId)
     @p_khach_hang NVARCHAR(255),
     @p_so_dien_thoai NVARCHAR(20),
     @p_email NVARCHAR(255) = NULL,
@@ -1924,111 +1925,82 @@ CREATE OR ALTER PROCEDURE WBH_US_CRT_HOA_DON_DIEN_TU
 AS
 BEGIN
     SET NOCOUNT ON;
-    
+
     DECLARE @rtn_value INT = 0;
     DECLARE @message NVARCHAR(500) = '';
-    DECLARE @invoice_number NVARCHAR(50);
+    DECLARE @invoice_number NVARCHAR(50) = NULL;
     DECLARE @current_date NVARCHAR(20);
-    
+
     BEGIN TRY
         BEGIN TRANSACTION;
-        
-        -- Tạo ngày hiện tại dưới dạng string
-        SET @current_date = FORMAT(GETDATE(), 'dd/MM/yyyy');
-        
-        -- Kiểm tra hóa đơn có tồn tại không
+
+        -- Kiểm tra hóa đơn gốc tồn tại không
         IF NOT EXISTS (SELECT 1 FROM HOA_DON WHERE id_hd = @p_id_hd)
         BEGIN
-            SET @rtn_value = -1;
-            SET @message = N'Hóa đơn không tồn tại';
-            SELECT @rtn_value as rtn_value, @message as message;
-            RETURN;
+            THROW 50000, N'Hóa đơn không tồn tại', 1; -- ném lỗi để đi vào CATCH
         END
-        
+
         -- Tạo số hóa đơn điện tử
         SET @invoice_number = 'HD' + RIGHT('00000000' + CAST(@p_id_hoa_don AS NVARCHAR), 8);
-        
-        -- Cập nhật thông tin hóa đơn với thông tin hóa đơn điện tử
-        UPDATE HOA_DON 
+        SET @current_date = FORMAT(GETDATE(), 'dd/MM/yyyy HH:mm:ss');
+
+        -- Ghi nội dung chi tiết vào noidung của hóa đơn
+        UPDATE HOA_DON
         SET noidung = CONCAT(
-            ISNULL(noidung, ''), 
+            ISNULL(noidung, ''),
             CHAR(13) + CHAR(10) + '=== HÓA ĐƠN ĐIỆN TỬ ===',
-            CHAR(13) + CHAR(10) + 'Số HĐ: ', @invoice_number,
+            CHAR(13) + CHAR(10) + 'Mã HĐĐT: ', @invoice_number,
             CHAR(13) + CHAR(10) + 'Khách hàng: ', @p_khach_hang,
             CHAR(13) + CHAR(10) + 'SĐT: ', @p_so_dien_thoai,
             CASE WHEN @p_email IS NOT NULL THEN CHAR(13) + CHAR(10) + 'Email: ' + @p_email ELSE '' END,
             CHAR(13) + CHAR(10) + 'Địa chỉ: ', @p_dia_chi,
             CHAR(13) + CHAR(10) + 'Phương thức TT: ', @p_phuong_thuc_thanh_toan,
             CHAR(13) + CHAR(10) + 'Mã giao dịch: ', @p_ma_giao_dich,
-            CHAR(13) + CHAR(10) + 'Tổng tiền: ', FORMAT(@p_tong_tien, 'N0'), ' VNĐ'
+            CHAR(13) + CHAR(10) + 'Tổng tiền: ', FORMAT(@p_tong_tien, 'N0'), ' VNĐ',
+            CHAR(13) + CHAR(10) + 'Ngày tạo: ', @current_date,
+            CHAR(13) + CHAR(10) + 'Chi tiết sản phẩm: ', @p_chi_tiet_san_pham
         )
         WHERE id_hd = @p_id_hd;
-        
-        -- Cập nhật thông tin thanh toán với mã giao dịch mới
-        UPDATE THANH_TOAN 
-        SET magiaodich = @p_ma_giao_dich,
-            phuongthuc = @p_phuong_thuc_thanh_toan,
-            sotien = @p_tong_tien
-        WHERE hoadon = @p_id_hd;
-        
-        -- Nếu chưa có bản ghi thanh toán, tạo mới
-        IF @@ROWCOUNT = 0
+
+        -- Cập nhật thanh toán
+        IF EXISTS (SELECT 1 FROM THANH_TOAN WHERE hoadon = @p_id_hd)
         BEGIN
-            INSERT INTO THANH_TOAN (
-                hoadon, phuongthuc, sotien, magiaodich, 
-                taikhoan, ngaythanhtoan
-            )
-            SELECT 
-                @p_id_hd, @p_phuong_thuc_thanh_toan, @p_tong_tien, @p_ma_giao_dich,
-                taikhoan, @current_date
-            FROM HOA_DON 
-            WHERE id_hd = @p_id_hd;
+            UPDATE THANH_TOAN
+            SET magiaodich = @p_ma_giao_dich,
+                phuongthuc = @p_phuong_thuc_thanh_toan,
+                sotien = @p_tong_tien,
+                ngaythanhtoan = GETDATE()
+            WHERE hoadon = @p_id_hd;
         END
-        
-        -- Cập nhật địa chỉ khách hàng nếu cần
-        DECLARE @taikhoan_id INT;
-        SELECT @taikhoan_id = taikhoan FROM HOA_DON WHERE id_hd = @p_id_hd;
-        
-        IF @taikhoan_id IS NOT NULL
+        ELSE
         BEGIN
-            -- Cập nhật thông tin tài khoản
-            UPDATE TAI_KHOAN 
-            SET hoveten = @p_khach_hang,
-                sodienthoai = @p_so_dien_thoai,
-                email = ISNULL(@p_email, email)
-            WHERE id_tk = @taikhoan_id;
-            
-            -- Thêm địa chỉ nếu chưa có
-            IF NOT EXISTS (
-                SELECT 1 FROM DIA_CHI 
-                WHERE taikhoan = @taikhoan_id AND diachi = @p_dia_chi
-            )
-            BEGIN
-                INSERT INTO DIA_CHI (taikhoan, diachi)
-                VALUES (@taikhoan_id, @p_dia_chi);
-            END
+            INSERT INTO THANH_TOAN (hoadon, phuongthuc, sotien, magiaodich, ngaythanhtoan)
+            VALUES (@p_id_hd, @p_phuong_thuc_thanh_toan, @p_tong_tien, @p_ma_giao_dich, GETDATE());
         END
-        
+
         COMMIT TRANSACTION;
-        
+
         SET @message = N'Tạo hóa đơn điện tử thành công';
-        
+
     END TRY
     BEGIN CATCH
-        ROLLBACK TRANSACTION;
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
         SET @rtn_value = ERROR_NUMBER();
         SET @message = ERROR_MESSAGE();
     END CATCH
-    
-    -- Trả về kết quả theo format mà Vue.js code mong đợi
+
     SELECT 
-        @rtn_value as rtn_value,
-        @message as message,
-        @invoice_number as invoice_number,
-        @p_id_hd as id_hd,
-        @p_id_hoa_don as id_hoa_don;
+        @rtn_value AS rtn_value,
+        @message AS message,
+        @invoice_number AS invoice_number,
+        @p_id_hd AS id_hd,
+        @p_id_hoa_don AS id_hoa_don;
 END
 GO
+
+
 --END HOA_DON
 
 /*-- THONG_KE --*/

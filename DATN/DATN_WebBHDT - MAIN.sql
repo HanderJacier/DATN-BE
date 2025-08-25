@@ -796,7 +796,7 @@ END
 GO
 
 -- WBH_US_SEL_LOGIN_USER
-CREATE PROCEDURE WBH_US_SEL_LOGIN_USER
+CREATE OR ALTER PROCEDURE WBH_US_SEL_LOGIN_USER
     @p_tendangnhap NVARCHAR(255),
     @p_matkhau NVARCHAR(255)
 AS
@@ -806,22 +806,20 @@ BEGIN
     DECLARE @p_rtn_value INT;
 
     BEGIN TRY
-        -- 1. Kiểm tra dữ liệu đầu vào
+        -- 1. Kiểm tra input
         IF (@p_tendangnhap IS NULL OR LTRIM(RTRIM(@p_tendangnhap)) = '')
         BEGIN
-            SET @p_rtn_value = 1;
-            SELECT @p_rtn_value AS rtn_value;
+            SELECT 1 AS rtn_value, N'Tên đăng nhập không được rỗng' AS message;
             RETURN;
         END
 
         IF (@p_matkhau IS NULL OR LTRIM(RTRIM(@p_matkhau)) = '')
         BEGIN
-            SET @p_rtn_value = 2;
-            SELECT @p_rtn_value AS rtn_value;
+            SELECT 2 AS rtn_value, N'Mật khẩu không được rỗng' AS message;
             RETURN;
         END
 
-        -- 2. Tìm tài khoản
+        -- 2. Lấy thông tin tài khoản
         DECLARE @id_tk INT,
                 @matkhau_db NVARCHAR(255),
                 @trangthai BIT;
@@ -833,50 +831,54 @@ BEGIN
         FROM TAI_KHOAN
         WHERE tendangnhap = @p_tendangnhap;
 
+        -- Không tồn tại tài khoản
         IF (@id_tk IS NULL)
         BEGIN
-            SET @p_rtn_value = 3;
-            SELECT @p_rtn_value AS rtn_value;
+            SELECT 3 AS rtn_value, N'Tài khoản không tồn tại' AS message;
             RETURN;
         END
 
+        -- ❌ Nếu mật khẩu DB là NULL → không cho đăng nhập
+        IF (@matkhau_db IS NULL)
+        BEGIN
+            SELECT -10 AS rtn_value, N'Tài khoản này chưa có mật khẩu, vui lòng đăng nhập bằng Google hoặc đặt mật khẩu' AS message;
+            RETURN;
+        END
+
+        -- Sai mật khẩu
         IF (@matkhau_db <> @p_matkhau)
         BEGIN
-            SET @p_rtn_value = 4;
-            SELECT @p_rtn_value AS rtn_value;
+            SELECT 4 AS rtn_value, N'Sai mật khẩu' AS message;
             RETURN;
         END
 
+        -- Tài khoản bị khóa
         IF (@trangthai = 0)
         BEGIN
-            SET @p_rtn_value = 5;
-            SELECT @p_rtn_value AS rtn_value;
+            SELECT 5 AS rtn_value, N'Tài khoản đã bị khóa' AS message;
             RETURN;
         END
 
-        -- Đăng nhập thành công
-        SET @p_rtn_value = 0;
-
-        -- Trả thông tin tài khoản
+        -- ✅ Đăng nhập thành công
         SELECT 
+            0 AS rtn_value, 
+            N'Đăng nhập thành công' AS message,
             id_tk,
             tendangnhap,
             vaitro,
             hoveten,
             sodienthoai,
             email,
+            trangthai,
             ngaytao,
             ngaycapnhat
         FROM TAI_KHOAN
         WHERE id_tk = @id_tk;
-        -- Trả mã kết quả
-        SELECT @p_rtn_value AS rtn_value;
     END TRY
     BEGIN CATCH
-        SET @p_rtn_value = 99;
-        SELECT @p_rtn_value AS rtn_value;
+        SELECT 99 AS rtn_value, ERROR_MESSAGE() AS message;
     END CATCH
-END;
+END
 GO
 -- WBH_US_CRT_CREATE_ACCOUNT
 CREATE PROCEDURE WBH_US_CRT_CREATE_ACCOUNT
@@ -1023,39 +1025,63 @@ BEGIN
 END
 GO
 -- WBH_US_UPD_DOI_MAT_KHAU
-CREATE PROCEDURE WBH_US_UPD_DOI_MAT_KHAU
-    @p_id_tk INT,
-    @p_matkhau_cu NVARCHAR(255),
-    @p_matkhau_moi NVARCHAR(255)
+CREATE OR ALTER PROCEDURE WBH_US_UPD_DOI_MAT_KHAU
+    @p_id_tk        INT,
+    @p_matkhau_cu   NVARCHAR(255) = NULL,  -- có thể NULL khi account chưa có mật khẩu
+    @p_matkhau_moi  NVARCHAR(255)
 AS
 BEGIN
     SET NOCOUNT ON;
-    
-    DECLARE @rtn_value INT;
+
+    -- Quan trọng: trigger trg_auto_dayedit_taikhoan viết 'dd/MM/yyyy' vào cột DATE
+    -- nên cần ấn định định dạng ngày để tránh lỗi 241.
+    SET DATEFORMAT dmy;
+
     DECLARE @matkhau_db NVARCHAR(255);
-    
-    -- Lấy mật khẩu hiện tại
+
+    -- 0) Tài khoản tồn tại?
     SELECT @matkhau_db = matkhau
     FROM TAI_KHOAN
     WHERE id_tk = @p_id_tk;
-    
-    IF @matkhau_db IS NULL
-        SET @rtn_value = -1; -- Tài khoản không tồn tại
-    ELSE IF @matkhau_db != @p_matkhau_cu
-        SET @rtn_value = -2; -- Mật khẩu cũ không đúng
-    ELSE IF LEN(@p_matkhau_moi) < 6
-        SET @rtn_value = -3; -- Mật khẩu mới quá ngắn
-    ELSE
+
+    IF (@@ROWCOUNT = 0)
+    BEGIN
+        SELECT -1 AS rtn_value, N'Tài khoản không tồn tại' AS message;
+        RETURN;
+    END
+
+    -- 1) Validate mật khẩu mới
+    IF (@p_matkhau_moi IS NULL OR LTRIM(RTRIM(@p_matkhau_moi)) = '' OR LEN(@p_matkhau_moi) < 6)
+    BEGIN
+        SELECT -3 AS rtn_value, N'Mật khẩu mới không hợp lệ (≥ 6 ký tự, không để trống)' AS message;
+        RETURN;
+    END
+
+    -- 2) Chưa có mật khẩu -> đặt luôn
+    IF (@matkhau_db IS NULL)
     BEGIN
         UPDATE TAI_KHOAN
         SET matkhau = @p_matkhau_moi
         WHERE id_tk = @p_id_tk;
-        
-        SET @rtn_value = 0; -- Thành công
+
+        SELECT 0 AS rtn_value, N'Đặt mật khẩu lần đầu thành công' AS message;
+        RETURN;
     END
-    
-    SELECT @rtn_value AS rtn_value;
-END;
+
+    -- 3) Đã có mật khẩu -> kiểm tra mật khẩu cũ
+    IF (@p_matkhau_cu IS NULL OR @p_matkhau_cu <> @matkhau_db)
+    BEGIN
+        SELECT -2 AS rtn_value, N'Mật khẩu cũ không đúng' AS message;
+        RETURN;
+    END
+
+    -- 4) Cập nhật mật khẩu mới
+    UPDATE TAI_KHOAN
+    SET matkhau = @p_matkhau_moi
+    WHERE id_tk = @p_id_tk;
+
+    SELECT 0 AS rtn_value, N'Đổi mật khẩu thành công' AS message;
+END
 GO
 -- WBH_US_SEL_HD_CHI_TIET_THEO_DANH_SACH
 CREATE OR ALTER PROCEDURE WBH_US_SEL_HD_CHI_TIET_THEO_DANH_SACH

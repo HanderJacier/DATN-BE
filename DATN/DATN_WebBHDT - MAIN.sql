@@ -362,6 +362,7 @@ BEGIN
     SELECT TOP 10 * 
     FROM vw_SanPham_ChiTiet
     WHERE trangthai = 'Y'
+    AND soluong > 0 
     ORDER BY TRY_CONVERT(date, ngaytao, 103) DESC;
 END;
 GO
@@ -406,6 +407,7 @@ BEGIN
             soluong
         FROM vw_SanPham_ChiTiet
         WHERE trangthai = 'Y'
+        AND soluong > 0 
         GROUP BY 
             id_sp,
             tensanpham,
@@ -441,6 +443,7 @@ BEGIN
     WHERE TRY_CONVERT(date, hangiamgia, 103) >= CAST(GETDATE() AS date)
           AND TRY_CONVERT(date, hangiamgia, 103) IS NOT NULL
           AND trangthai = 'Y';
+          AND soluong > 0 
 END;
 GO
 -- WBH_AD_UPD_SUASP

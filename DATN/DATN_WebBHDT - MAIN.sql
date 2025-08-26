@@ -428,6 +428,250 @@ BEGIN
         vw_SanPham_ChiTiet
 END;
 GO
+/*================= GIỎ HÀNG =================*/
+
+/* 1) SELECT giỏ hàng theo tài khoản
+      - Trả về: thông tin SP, ảnh, đơn giá áp dụng (ưu tiên giamgia nếu > 0), 
+        trangthai sản phẩm, soluong_goc (tồn kho), soluong_gh (trong giỏ), thành tiền
+*/
+--WBH_US_SEL_GIO_HANG
+CREATE OR ALTER PROCEDURE WBH_US_SEL_GIO_HANG
+    @p_taikhoan INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT 
+        gh.id_gh,
+        gh.taikhoan,
+        sp.id_sp,
+        sp.tensanpham,
+        sp.anhgoc,
+        sp.trangthai,
+        ts.soluong                            AS soluong_goc,         -- tồn kho gốc
+        gh.soluong                            AS soluong_gh,          -- số lượng trong giỏ
+        sp.dongia,
+        sp.giamgia,
+        CASE WHEN sp.giamgia IS NOT NULL AND sp.giamgia > 0 
+             THEN sp.giamgia ELSE sp.dongia END AS dongia_ap_dung,
+        CAST( (CASE WHEN sp.giamgia IS NOT NULL AND sp.giamgia > 0 
+                   THEN sp.giamgia ELSE sp.dongia END) * gh.soluong 
+             AS DECIMAL(18,2))                AS thanhtien
+    FROM GIO_HANG gh
+    JOIN SAN_PHAM sp     ON sp.id_sp   = gh.sanpham
+    LEFT JOIN SP_THONG_SO ts ON ts.sanpham = sp.id_sp
+    WHERE gh.taikhoan = @p_taikhoan
+    ORDER BY gh.id_gh DESC;
+END;
+GO
+
+
+/* 2) Thêm / Sửa / Xoá giỏ hàng (1 proc)
+      @p_action: 1=Thêm (cộng dồn); 2=Xoá; 3=Cập nhật số lượng tuyệt đối
+      - Khi THÊM hoặc CẬP NHẬT sẽ:
+          + Kiểm tra sản phẩm tồn tại
+          + Kiểm tra trạng thái SAN_PHAM.trangthai = 'Y'
+          + Kiểm tra tồn kho SP_THONG_SO.soluong đủ (tính cả đang có trong giỏ nếu action=1)
+      - Trả về: rtn_value, message, id_gh (nếu có)
+*/
+--WBH_US_UPD_GIO_HANG
+CREATE OR ALTER PROCEDURE WBH_US_UPD_GIO_HANG
+    @p_action   INT,              -- 1=add, 2=delete, 3=update qty
+    @p_taikhoan INT,
+    @p_sanpham  INT       = NULL, -- dùng cho add / update / delete-by-product
+    @p_soluong  INT       = NULL, -- số lượng muốn thêm hoặc set
+    @p_id_gh    INT       = NULL  -- dùng cho delete/update-by-id (tuỳ chọn)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @rtn_value INT = 0, @msg NVARCHAR(255) = N'';
+    DECLARE @exists_id INT, @cur_qty INT = 0;
+    DECLARE @stock INT = NULL, @status CHAR(1) = NULL;
+
+    BEGIN TRY
+        -- Chuẩn hóa qty
+        IF @p_action IN (1,3) AND ( @p_soluong IS NULL OR @p_soluong <= 0 )
+        BEGIN
+            SET @rtn_value = -1; SET @msg = N'Số lượng phải > 0';
+            SELECT @rtn_value AS rtn_value, @msg AS message, NULL AS id_gh; RETURN;
+        END
+
+        -- Xác định dòng GH hiện có (nếu có)
+        SELECT TOP 1 
+            @exists_id = gh.id_gh,
+            @cur_qty   = gh.soluong
+        FROM GIO_HANG gh
+        WHERE gh.taikhoan = @p_taikhoan
+          AND (@p_id_gh IS NULL OR gh.id_gh = @p_id_gh)
+          AND (@p_sanpham IS NULL OR gh.sanpham = @p_sanpham);
+
+        /* ----- ACTION: DELETE (2) ----- */
+        IF @p_action = 2
+        BEGIN
+            IF @exists_id IS NULL
+            BEGIN
+                SET @rtn_value = -2; SET @msg = N'Không tìm thấy dòng giỏ hàng để xoá';
+                SELECT @rtn_value AS rtn_value, @msg AS message, NULL AS id_gh; RETURN;
+            END
+
+            DELETE FROM GIO_HANG WHERE id_gh = @exists_id;
+
+            SET @rtn_value = 0; SET @msg = N'Xoá giỏ hàng thành công';
+            SELECT @rtn_value AS rtn_value, @msg AS message, @exists_id AS id_gh; RETURN;
+        END
+
+        /* Lấy trạng thái & tồn kho sản phẩm (cho ADD/UPDATE) */
+        IF @p_sanpham IS NULL
+        BEGIN
+            SET @rtn_value = -3; SET @msg = N'Thiếu tham số sản phẩm';
+            SELECT @rtn_value AS rtn_value, @msg AS message, NULL AS id_gh; RETURN;
+        END
+
+        SELECT 
+            @status = sp.trangthai,
+            @stock  = ts.soluong
+        FROM SAN_PHAM sp
+        LEFT JOIN SP_THONG_SO ts ON ts.sanpham = sp.id_sp
+        WHERE sp.id_sp = @p_sanpham;
+
+        IF @status IS NULL
+        BEGIN
+            SET @rtn_value = -4; SET @msg = N'Sản phẩm không tồn tại';
+            SELECT @rtn_value AS rtn_value, @msg AS message, NULL AS id_gh; RETURN;
+        END
+
+        IF @status <> 'Y'
+        BEGIN
+            SET @rtn_value = -5; SET @msg = N'Sản phẩm đang ngừng kinh doanh';
+            SELECT @rtn_value AS rtn_value, @msg AS message, NULL AS id_gh; RETURN;
+        END
+
+        IF @stock IS NULL OR @stock <= 0
+        BEGIN
+            SET @rtn_value = -6; SET @msg = N'Sản phẩm đã hết hàng';
+            SELECT @rtn_value AS rtn_value, @msg AS message, NULL AS id_gh; RETURN;
+        END
+
+        /* ----- ACTION: ADD (1) ----- */
+        IF @p_action = 1
+        BEGIN
+            DECLARE @need INT = @p_soluong + ISNULL(@cur_qty, 0);
+            IF @need > @stock
+            BEGIN
+                SET @rtn_value = -7; 
+                SET @msg = N'Số lượng yêu cầu vượt tồn kho. Tồn còn: ' + CAST(@stock AS NVARCHAR);
+                SELECT @rtn_value AS rtn_value, @msg AS message, NULL AS id_gh; RETURN;
+            END
+
+            IF @exists_id IS NULL
+            BEGIN
+                INSERT INTO GIO_HANG (sanpham, soluong, taikhoan)
+                VALUES (@p_sanpham, @p_soluong, @p_taikhoan);
+
+                SET @exists_id = SCOPE_IDENTITY();
+            END
+            ELSE
+            BEGIN
+                UPDATE GIO_HANG
+                SET soluong = soluong + @p_soluong
+                WHERE id_gh = @exists_id;
+            END
+
+            SET @rtn_value = 0; SET @msg = N'Thêm vào giỏ hàng thành công';
+            SELECT @rtn_value AS rtn_value, @msg AS message, @exists_id AS id_gh; RETURN;
+        END
+
+        /* ----- ACTION: UPDATE (3) ----- */
+        IF @p_action = 3
+        BEGIN
+            IF @exists_id IS NULL
+            BEGIN
+                -- Nếu chưa có dòng -> coi như tạo mới với qty yêu cầu, nhưng vẫn check tồn
+                IF @p_soluong > @stock
+                BEGIN
+                    SET @rtn_value = -7; 
+                    SET @msg = N'Số lượng yêu cầu vượt tồn kho. Tồn còn: ' + CAST(@stock AS NVARCHAR);
+                    SELECT @rtn_value AS rtn_value, @msg AS message, NULL AS id_gh; RETURN;
+                END
+
+                INSERT INTO GIO_HANG (sanpham, soluong, taikhoan)
+                VALUES (@p_sanpham, @p_soluong, @p_taikhoan);
+
+                SET @exists_id = SCOPE_IDENTITY();
+            END
+            ELSE
+            BEGIN
+                IF @p_soluong > @stock
+                BEGIN
+                    SET @rtn_value = -7; 
+                    SET @msg = N'Số lượng yêu cầu vượt tồn kho. Tồn còn: ' + CAST(@stock AS NVARCHAR);
+                    SELECT @rtn_value AS rtn_value, @msg AS message, @exists_id AS id_gh; RETURN;
+                END
+
+                UPDATE GIO_HANG
+                SET soluong = @p_soluong
+                WHERE id_gh = @exists_id;
+            END
+
+            SET @rtn_value = 0; SET @msg = N'Cập nhật số lượng thành công';
+            SELECT @rtn_value AS rtn_value, @msg AS message, @exists_id AS id_gh; RETURN;
+        END
+
+        -- Action không hợp lệ
+        SET @rtn_value = -99; SET @msg = N'Action không hợp lệ (1=add, 2=delete, 3=update)';
+        SELECT @rtn_value AS rtn_value, @msg AS message, NULL AS id_gh;
+    END TRY
+    BEGIN CATCH
+        SELECT ERROR_NUMBER() AS rtn_value, ERROR_MESSAGE() AS message, NULL AS id_gh;
+    END CATCH
+END;
+GO
+--WBH_US_DEL_GIO_HANG
+CREATE OR ALTER PROCEDURE WBH_US_DEL_GIO_HANG
+    @p_action   INT,          -- 1 = xóa toàn bộ giỏ, 2 = xóa 1 sản phẩm
+    @p_taikhoan INT,
+    @p_sanpham  INT = NULL    -- chỉ cần khi @p_action = 2
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Kiểm tra tài khoản tồn tại
+    IF NOT EXISTS (SELECT 1 FROM TAI_KHOAN WHERE id_tk = @p_taikhoan)
+    BEGIN
+        SELECT -1 AS rtn_value, N'Tài khoản không tồn tại' AS message;
+        RETURN;
+    END
+
+    IF @p_action = 1
+    BEGIN
+        -- Xóa toàn bộ giỏ hàng
+        DELETE FROM GIO_HANG WHERE taikhoan = @p_taikhoan;
+        SELECT 0 AS rtn_value, N'Đã xóa toàn bộ giỏ hàng' AS message, @p_taikhoan AS id_tk;
+    END
+    ELSE IF @p_action = 2
+    BEGIN
+        -- Xóa 1 sản phẩm cụ thể
+        IF @p_sanpham IS NULL
+        BEGIN
+            SELECT -2 AS rtn_value, N'Thiếu tham số sản phẩm cần xóa' AS message;
+            RETURN;
+        END
+
+        DELETE FROM GIO_HANG 
+        WHERE taikhoan = @p_taikhoan AND sanpham = @p_sanpham;
+
+        IF @@ROWCOUNT > 0
+            SELECT 0 AS rtn_value, N'Đã xóa sản phẩm khỏi giỏ' AS message, @p_sanpham AS id_sp, @p_taikhoan AS id_tk;
+        ELSE
+            SELECT -3 AS rtn_value, N'Sản phẩm không tồn tại trong giỏ' AS message;
+    END
+    ELSE
+    BEGIN
+        SELECT -99 AS rtn_value, N'Hành động không hợp lệ' AS message;
+    END
+END;
+GO
 -- WBH_US_SEL_NGAYTAOSP
 CREATE PROCEDURE WBH_US_SEL_NGAYTAOSP
 AS

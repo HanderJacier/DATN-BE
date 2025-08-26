@@ -412,8 +412,6 @@ BEGIN
         *
     FROM 
         vw_SanPham_ChiTiet
-    WHERE 
-        id_sp = @p_id_sp and trangthai = 'Y';
 END;
 GO
 -- WBH_US_SEL_XEMSP

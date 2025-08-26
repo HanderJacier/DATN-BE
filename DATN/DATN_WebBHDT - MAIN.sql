@@ -1541,7 +1541,7 @@ BEGIN
     
     -- Cập nhật trạng thái hóa đơn
     UPDATE HOA_DON
-    SET trangthai = N'Đã thanh toán'
+    SET trangthai = N'Chờ xử lý'
     WHERE id_hd = @p_hoadon;
     
     SELECT SCOPE_IDENTITY() AS id_tt;

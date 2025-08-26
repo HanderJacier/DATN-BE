@@ -1499,7 +1499,7 @@ BEGIN
     SET NOCOUNT ON;
     
     INSERT INTO HOA_DON (taikhoan, giahoadon, trangthai, noidung)
-    VALUES (@p_taikhoan, @p_giahoadon, N'Chờ thanh toán', @p_noidung);
+    VALUES (@p_taikhoan, @p_giahoadon, N'Chờ xác nhận', @p_noidung);
     
     SELECT SCOPE_IDENTITY() AS id_hd;
 END;
@@ -1791,10 +1791,10 @@ BEGIN
     
     SELECT 
         COUNT(*) AS tong_hoa_don,
-        SUM(CASE WHEN trangthai = N'Đã thanh toán' THEN 1 ELSE 0 END) AS da_thanh_toan,
-        SUM(CASE WHEN trangthai = N'Chờ thanh toán' THEN 1 ELSE 0 END) AS cho_thanh_toan,
+        SUM(CASE WHEN trangthai = N'Đã xử lý' THEN 1 ELSE 0 END) AS da_thanh_toan,
+        SUM(CASE WHEN trangthai = N'Chờ xác nhận' THEN 1 ELSE 0 END) AS cho_thanh_toan,
         SUM(CASE WHEN trangthai = N'Đã hủy' THEN 1 ELSE 0 END) AS da_huy,
-        SUM(CASE WHEN trangthai = N'Đã thanh toán' THEN giahoadon ELSE 0 END) AS tong_doanh_thu
+        SUM(CASE WHEN trangthai = N'Đã xử lý' THEN giahoadon ELSE 0 END) AS tong_doanh_thu
     FROM HOA_DON;
     
     -- Thống kê theo tháng
@@ -1802,7 +1802,7 @@ BEGIN
         YEAR(ngaytao) AS nam,
         MONTH(ngaytao) AS thang,
         COUNT(*) AS so_hoa_don,
-        SUM(CASE WHEN trangthai = N'Đã thanh toán' THEN giahoadon ELSE 0 END) AS doanh_thu
+        SUM(CASE WHEN trangthai = N'Đã xử lý' THEN giahoadon ELSE 0 END) AS doanh_thu
     FROM HOA_DON
     WHERE ngaytao >= DATEADD(MONTH, -12, GETDATE())
     GROUP BY YEAR(ngaytao), MONTH(ngaytao)
@@ -1851,7 +1851,7 @@ BEGIN
     
     -- Xác định trạng thái dựa trên resultCode
     IF @p_resultCode = 0
-        SET @trangthai = N'Đã thanh toán';
+        SET @trangthai = N'Đã xử lý';
     ELSE
         SET @trangthai = N'Thanh toán thất bại';
     
@@ -1902,7 +1902,7 @@ BEGIN
         tt.ngaythanhtoan,
         hd.trangthai,
         CASE 
-            WHEN hd.trangthai = N'Đã thanh toán' THEN 'success'
+            WHEN hd.trangthai = N'Đã xử lý' THEN 'success'
             WHEN hd.trangthai = N'Thanh toán thất bại' THEN 'failed'
             ELSE 'pending'
         END AS status
@@ -1918,7 +1918,7 @@ CREATE OR ALTER PROCEDURE WBH_US_CRT_DAT_HANG
     @p_email NVARCHAR(255) = NULL,
     @p_diachi NVARCHAR(255),
     @p_noidung NVARCHAR(255) = NULL,
-    @p_trangthai NVARCHAR(255) = N'Chờ xác nhận',
+    @p_trangthai NVARCHAR(255) = N'Chờ xử lý',
     @p_sanphams NVARCHAR(MAX)  -- JSON string chứa danh sách sản phẩm: [{"sanpham": int, "dongia": decimal, "soluong": int}, ...]
 AS
 BEGIN
@@ -2272,7 +2272,7 @@ BEGIN
         COUNT(*) AS so_don_hang,
         SUM(hd.giahoadon) AS tong_doanh_thu
     FROM HOA_DON hd
-    WHERE hd.trangthai = N'Đã thanh toán'
+    WHERE hd.trangthai = N'Đã xử lý'
       AND TRY_CONVERT(DATE, hd.ngaytao, 103) >= @fromDate
       AND TRY_CONVERT(DATE, hd.ngaytao, 103) <= @toDate
     GROUP BY FORMAT(TRY_CONVERT(DATE, hd.ngaytao, 103), 'dd/MM/yyyy')
